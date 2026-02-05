@@ -15,9 +15,10 @@ import { RouteDetails } from "./presentation/pages/RouteDetails";
 import { DeliveriesOverview } from "./presentation/pages/DeliveriesOverview";
 import { BottomNavigation } from "./presentation/components/BottomNavigation";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function App() {
-  const { isLoggedIn } = useUserStore();
+  const { isLoggedIn, initialzedAuth, isInitialized } = useUserStore();
   const { setSelectedCustomer, selectedCustomer } = useUiStore();
   const {
     selectedDelivery,
@@ -30,6 +31,15 @@ export default function App() {
 
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!isInitialized) {
+      initialzedAuth();
+    }
+  }, [initialzedAuth, isInitialized]);
+
+  if (!isInitialized) {
+    return <div>Carregando...</div>;
+  }
   if (!isLoggedIn) {
     return <LoginScreen />;
   }
@@ -194,6 +204,8 @@ export default function App() {
               />
             }
           />
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
       <BottomNavigation />

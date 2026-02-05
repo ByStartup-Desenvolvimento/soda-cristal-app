@@ -29,7 +29,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Tratamento global de erros pode ser adicionado aqui
+        // Se receber 401 (Unauthorized), o token pode ter expirado
+        if (error.response?.status === 401) {
+            console.warn('⚠️ Token expirado ou inválido (401). Fazendo logout automático...');
+
+            // Limpa o localStorage
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('vendedorId');
+            localStorage.removeItem('distribuidorId');
+            localStorage.removeItem('user');
+
+            // Redireciona para a tela de login
+            // Nota: Isso funcionará se a aplicação verificar isLoggedIn no próximo render
+            window.location.href = '/login';
+        }
+
         return Promise.reject(error);
     }
 );
