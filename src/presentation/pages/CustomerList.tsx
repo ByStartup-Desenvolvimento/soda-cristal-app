@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shared/ui/card';
 import { Button } from '../../shared/ui/button';
 import { Badge } from '../../shared/ui/badge';
 import { Input } from '../../shared/ui/input';
-import { Search, UserPlus, MapPin, Phone, Droplets, Users } from 'lucide-react';
+import { Search, UserPlus, MapPin, Phone, Droplets, Users, RefreshCw } from 'lucide-react';
+import { useClientesStore } from '../../domain/clientes/clienteStore';
+import { formatPhone, formatAddress, mapStatusToLabel } from '../../shared/utils/formatters';
+import { ApiDebugView } from '../components/ApiDebugView';
 
 interface CustomerListProps {
   onAddCustomer: () => void;
@@ -14,11 +17,20 @@ interface CustomerListProps {
 export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts, onViewHistory }: CustomerListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock data de clientes
-  const customers = [
+  const { clientes, loadClientes, isLoading } = useClientesStore();
+
+  useEffect(() => {
+    // Carrega clientes ao montar. 
+    // TODO: Obter ID do vendedor real do contexto de autenticação.
+    const VENDEDOR_ID_MOCK = 1;
+    loadClientes(VENDEDOR_ID_MOCK);
+  }, [loadClientes]);
+
+  // Mock data de clientes (Fallback)
+  const mockCustomers = [
     {
-      id: 1,
-      name: 'João Silva',
+      id: 9991,
+      name: 'João Silva (Mock)',
       phone: '(11) 99999-1234',
       address: 'Rua das Flores, 123 - Centro',
       contractType: 'Comodato Semanal',
@@ -28,8 +40,8 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
       nextDelivery: '2024-01-24'
     },
     {
-      id: 2,
-      name: 'Maria Santos',
+      id: 9992,
+      name: 'Maria Santos (Mock)',
       phone: '(11) 99999-5678',
       address: 'Av. Principal, 456 - Bairro Alto',
       contractType: 'Comodato Quinzenal',
@@ -39,8 +51,8 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
       nextDelivery: '2024-01-24'
     },
     {
-      id: 3,
-      name: 'Carlos Oliveira',
+      id: 9993,
+      name: 'Carlos Oliveira (Mock)',
       phone: '(11) 99999-9012',
       address: 'Rua Nova, 789 - Vila Nova',
       contractType: 'Comodato Quinzenal',
@@ -48,43 +60,43 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
       status: 'ativo',
       lastDelivery: '2024-01-03',
       nextDelivery: '2024-01-17'
-    },
-    {
-      id: 4,
-      name: 'Ana Costa',
-      phone: '(11) 99999-3456',
-      address: 'Rua da Paz, 321 - Jardim',
-      contractType: 'Venda Direta',
-      bottleSize: '20L',
-      status: 'inativo',
-      lastDelivery: '2024-01-10',
-      nextDelivery: null
-    },
-    {
-      id: 5,
-      name: 'Roberto Lima',
-      phone: '(11) 99999-7890',
-      address: 'Rua do Comércio, 890 - Centro Comercial',
-      contractType: 'Comodato Comercial',
-      bottleSize: '50L',
-      status: 'ativo',
-      lastDelivery: '2024-01-15',
-      nextDelivery: '2024-01-22'
-    },
-    {
-      id: 6,
-      name: 'Luciana Ferreira',
-      phone: '(11) 99999-2468',
-      address: 'Rua das Palmeiras, 456 - Jardim Verde',
-      contractType: 'Comodato Semanal',
-      bottleSize: '20L',
-      status: 'ativo',
-      lastDelivery: '2024-01-15',
-      nextDelivery: '2024-01-22'
     }
   ];
 
-  const filteredCustomers = customers.filter(customer =>
+  // Decide quais dados usar
+  // Regra: Se a API não retornou clientes (length === 0), usa o Mock.
+  const hasRealClients = clientes.length > 0;
+  const rawData = hasRealClients ? clientes : mockCustomers;
+
+  // Normaliza os dados para o formato da UI
+  const displayCustomers = rawData.map(c => {
+    // Verifica se é um cliente real (tem as props do model) ou mock (tem props da UI)
+    const isReal = 'ativo' in c;
+
+    if (isReal) {
+      // Mapping Real -> UI
+      // TODO: Ajustar model para garantir que campos existem ou formatters tratem undefined
+      const realClient = c as any; // Cast rápido pois Model x UI tem divergências que estamos tratando aqui
+      return {
+        id: realClient.id,
+        name: realClient.nome || realClient.razaosocial || 'Sem Nome',
+        phone: formatPhone(realClient.fone || realClient.celular2),
+        address: formatAddress(realClient.rua, realClient.numero, realClient.bairro),
+        contractType: realClient.tipo_contrato || 'N/A',
+        bottleSize: realClient.produto_preferido || 'N/A', // Usando produto preferido como 'tamanho' por enquanto
+        status: mapStatusToLabel(realClient.ativo),
+        lastDelivery: realClient.ultima_entrega,
+        nextDelivery: realClient.proxima_entrega,
+        original: realClient
+      };
+    } else {
+      // Mock já está no formato UI
+      return c;
+    }
+  });
+
+
+  const filteredCustomers = displayCustomers.filter((customer: any) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm) ||
     customer.address.toLowerCase().includes(searchTerm.toLowerCase())
@@ -102,23 +114,32 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
   };
 
   const getContractColor = (contractType: string) => {
-    if (contractType.includes('Comodato')) {
+    if (contractType && contractType.includes('Comodato')) {
       return 'bg-blue-100 text-blue-800 border-blue-200';
     }
     return 'bg-purple-100 text-purple-800 border-purple-200';
   };
 
+
+
   return (
     <div className="p-4 space-y-4 pb-20">
+
+      {/* Componente de Debug - Remover em Produção */}
+      <ApiDebugView />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Clientes</h1>
+          <h1 className="text-2xl font-semibold">Clientes {hasRealClients ? '(API)' : '(Mock)'}</h1>
           <p className="text-sm text-muted-foreground">
             {filteredCustomers.length} clientes encontrados
           </p>
         </div>
         <div className="flex space-x-2">
+          <Button variant="outline" size="icon" onClick={() => loadClientes(1)} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
           <Button onClick={onAddCustomer} className="bg-blue-600 hover:bg-blue-700">
             <UserPlus className="w-4 h-4 mr-2" />
             Novo Cliente
@@ -139,7 +160,7 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
 
       {/* Customers List */}
       <div className="space-y-3">
-        {filteredCustomers.map((customer) => (
+        {filteredCustomers.map((customer: any) => (
           <Card key={customer.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -178,7 +199,10 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
                 <div>
                   <p className="text-muted-foreground">Última entrega:</p>
                   <p className="font-medium">
-                    {new Date(customer.lastDelivery).toLocaleDateString('pt-BR')}
+                    {/* Valida se data existe para evitar erro de parse */}
+                    {customer.lastDelivery && !isNaN(Date.parse(customer.lastDelivery))
+                      ? new Date(customer.lastDelivery).toLocaleDateString('pt-BR')
+                      : customer.lastDelivery || '-'}
                   </p>
                 </div>
 
@@ -186,29 +210,30 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
                   <div>
                     <p className="text-muted-foreground">Próxima entrega:</p>
                     <p className="font-medium text-blue-600">
-                      {new Date(customer.nextDelivery).toLocaleDateString('pt-BR')}
+                      {!isNaN(Date.parse(customer.nextDelivery))
+                        ? new Date(customer.nextDelivery).toLocaleDateString('pt-BR')
+                        : customer.nextDelivery}
                     </p>
                   </div>
                 )}
               </div>
 
-              {customer.status === 'ativo' && customer.nextDelivery && (
-                <div className="pt-2 border-t">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Água com Gás {customer.bottleSize}
-                    </span>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => onViewHistory?.(customer)}>
-                        Ver Histórico
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={onAddCustomer}>
-                        Editar
-                      </Button>
-                    </div>
+              {/* Botões de Ação */}
+              <div className="pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {customer.bottleSize}
+                  </span>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => onViewHistory?.(customer)}>
+                      Ver Histórico
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={onAddCustomer}>
+                      Editar
+                    </Button>
                   </div>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         ))}
