@@ -6,6 +6,7 @@ import { isTokenValid } from '../../shared/utils/tokenValidator';
 interface UserState {
     isLoggedIn: boolean;
     user: User | null;
+    vendedorId: number | null;
     isLoading: boolean;
     isInitialized: boolean;
     error: string | null;
@@ -17,6 +18,7 @@ interface UserState {
 export const useUserStore = create<UserState>((set) => ({
     isLoggedIn: false,
     user: null,
+    vendedorId: null,
     isLoading: false,
     error: null,
     isInitialized: false,
@@ -45,6 +47,7 @@ export const useUserStore = create<UserState>((set) => ({
                 set({
                     isLoggedIn: false,
                     user: null,
+                    vendedorId: null,
                     isLoading: false,
                     isInitialized: true
                 });
@@ -62,6 +65,7 @@ export const useUserStore = create<UserState>((set) => ({
                 set({
                     isLoggedIn: true,
                     user: user,
+                    vendedorId: vendedorId ? Number(vendedorId) : null,
                     isLoading: false,
                     isInitialized: true
                 });
@@ -78,6 +82,7 @@ export const useUserStore = create<UserState>((set) => ({
                 set({
                     isLoggedIn: false,
                     user: null,
+                    vendedorId: null,
                     isLoading: false,
                     isInitialized: true
                 });
@@ -110,6 +115,7 @@ export const useUserStore = create<UserState>((set) => ({
             set({
                 isLoggedIn: true,
                 user: response.user,// Fallback se backend não retornar user object ainda
+                vendedorId: response.vendedor.id,
                 isLoading: false,
             });
         } catch (error: any) {
@@ -129,6 +135,6 @@ export const useUserStore = create<UserState>((set) => ({
         localStorage.removeItem('vendedorId');
         localStorage.removeItem('distribuidorId');
         localStorage.removeItem('user');
-        set({ isLoggedIn: false, user: null });
+        set({ isLoggedIn: false, user: null, vendedorId: null });
     },
 }));

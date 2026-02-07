@@ -5,6 +5,7 @@ import { Badge } from '../../shared/ui/badge';
 import { Input } from '../../shared/ui/input';
 import { Search, UserPlus, MapPin, Phone, Droplets, Users, RefreshCw } from 'lucide-react';
 import { useClientesStore } from '../../domain/clientes/clienteStore';
+import { useUserStore } from '../../domain/auth/userStore';
 import { formatPhone, formatAddress, mapStatusToLabel } from '../../shared/utils/formatters';
 import { ApiDebugView } from '../components/ApiDebugView';
 
@@ -18,13 +19,13 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
   const [searchTerm, setSearchTerm] = useState('');
 
   const { clientes, loadClientes, isLoading } = useClientesStore();
+  const { vendedorId } = useUserStore();
 
   useEffect(() => {
-    // Carrega clientes ao montar. 
-    // TODO: Obter ID do vendedor real do contexto de autenticação.
-    const VENDEDOR_ID_MOCK = 1;
-    loadClientes(VENDEDOR_ID_MOCK);
-  }, [loadClientes]);
+    if (vendedorId) {
+      loadClientes(vendedorId);
+    }
+  }, [loadClientes, vendedorId]);
 
   // Mock data de clientes (Fallback)
   const mockCustomers = [
