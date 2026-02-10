@@ -67,4 +67,6 @@ trigger: always_on
 
 ## Documentação
 
+- **Visão geral**: README.md e docs\soda-cristal-context.md
+
 - Quando precisar de documentação externa use o MCP Context7

@@ -7,7 +7,7 @@ import { Search, UserPlus, MapPin, Phone, Droplets, Users, RefreshCw } from 'luc
 import { useClientesStore } from '../../domain/clientes/clienteStore';
 import { useUserStore } from '../../domain/auth/userStore';
 import { formatPhone, formatAddress, mapStatusToLabel } from '../../shared/utils/formatters';
-import { ApiDebugView } from '../components/ApiDebugView';
+// import { ApiDebugView } from '../components/ApiDebugView';
 
 interface CustomerListProps {
   onAddCustomer: () => void;
@@ -125,10 +125,6 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
 
   return (
     <div className="p-4 space-y-4 pb-20">
-
-      {/* Componente de Debug - Remover em Produção */}
-      <ApiDebugView />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
