@@ -9,10 +9,10 @@
 
 | Status | Quantidade |
 |--------|-----------|
-| ✅ Integrado com API | 4 páginas |
-| ⚠️ Parcialmente integrado | 3 páginas |
-| ❌ 100% Mock/Hardcoded | 4 páginas |
-| 🗑️ Páginas Órfãs (sem rota) | 2 páginas |
+| ✅ Integrado com API | 7 páginas |
+| ⚠️ Integração Parcial / Issues | 3 páginas |
+| ❌ 100% Mock/Hardcoded | 1 página |
+| 🗑️ Páginas Órfãs (sem rota) | 0 páginas |
 
 ---
 
@@ -42,11 +42,23 @@
 - **API**: `POST /checkin/full/{vendedorId}` + `POST /checkin/{vendedorId}`
 - **Status**: **Integrado** — Check-in real via `checkInService`
 
+#### 5. PendingContracts (`/contracts`)
+- **Arquivo**: [PendingContracts.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/PendingContracts.tsx)
+- **API**: `GET /pendencia-contrato/{vendedorId}` via `contratosApiService`
+- **Status**: **Integrado (Leitura)** — Lista pendências reais
+- **Pendência**: Botão "Resolver Pendência" apenas exibe toast (funcionalidade futura)
+
+#### 6. CustomerHistory (`/customers/history`)
+- **Arquivo**: [CustomerHistory.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/CustomerHistory.tsx)
+- **API**: `GET /vendas_vendedor/{vendedorId}` via `vendasService`
+- **Status**: **Integrado (Ineficiente)** — Busca TODAS as vendas do vendedor e filtra no front-end
+- **Pendência**: Idealmente backend deveria ter endpoint filtrado por cliente
+
 ---
 
 ### ⚠️ Páginas Parcialmente Integradas
 
-#### 5. RoutesScreen (`/routes`)
+#### 7. RoutesScreen (`/routes`)
 - **Arquivo**: [RoutesScreen.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/RoutesScreen.tsx)
 - **API**: `GET /rotas/{vendedorId}` via `useRotas` hook → `rotasStore`
 - **O que funciona**: Lista de rotas vem da API real
@@ -55,7 +67,7 @@
   - `priority` — **mockado** como `'medium'`
   - Fallback para `mockRoutes` se API falhar
 
-#### 6. DeliveriesOverview (`/deliveries`)
+#### 8. DeliveriesOverview (`/deliveries`)
 - **Arquivo**: [DeliveriesOverview.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/DeliveriesOverview.tsx)
 - **API**: `GET /rotas-entregas/rota/{rotaId}` via `useRotasStore`
 - **O que funciona**: Lista de clientes/entregas vem da API real (mapeados via `mapClienteToDelivery`)
@@ -66,57 +78,43 @@
   - `estimatedTime` — **mockado** como `'08:00'`
   - Fallback para `mockDeliveries` se sem dados
 
-#### 7. RouteDetails (`/routes/details`)
+#### 9. RouteDetails (`/routes/details`)
 - **Arquivo**: [RouteDetails.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/RouteDetails.tsx)
 - **O que funciona**: Recebe dados reais via props (vindo de `RoutesScreen` ou `DeliveriesOverview`)
 - **O que falta**:
   - Comentário no código: "Mock data das entregas da rota"
   - Status das entregas gerenciado apenas localmente via `deliveryStore` (sem persistência)
 
+#### 10. PDVStandalone (`/pdv` e `/pdv/delivery`)
+- **Arquivo**: [PDVStandalone.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/PDVStandalone.tsx)
+- **API**: 
+  - `GET /produtos/{vendedorId}` (via `produtosService`)
+  - `GET /meiospagamento/{distribuidorId}` (via `pagamentosService`)
+  - `POST /vendaxarope/v2` (via `vendasService`)
+- **Status**: **Integrado com Issues**
+- **Issue Crítica**: `vendedorId` está hardcoded como `123` dentro do `useEffect` (TODO no código)
+- **O que funciona**: Carrega produtos, meios de pagamento e envia venda para API real
+- **Pendência**: Remover hardcoding de ID e testar fluxo completo com dados reais do usuário logado
+
 ---
 
 ### ❌ Páginas 100% Mock / Sem Integração API
 
-#### 8. Dashboard (`/dashboard`)
+#### 11. Dashboard (`/dashboard`)
 - **Arquivo**: [Dashboard.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/Dashboard.tsx)
 - **Problema**: Array `deliveries` **totalmente hardcoded** no componente (6 entregas fake)
 - **Nome do usuário hardcoded**: "Bom dia, Ricardo!"
 - **Endpoints necessários**: Deveria consumir `rotasEntregas` + dados do vendedor logado
 - **Prioridade**: Baixa (parece legado, substituído por `/deliveries`)
 
-#### 9. PDVStandalone (`/pdv` e `/pdv/delivery`)
-- **Arquivo**: [PDVStandalone.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/PDVStandalone.tsx)
-- **Problema**: 
-  - Lista de `products` **totalmente hardcoded** (18 produtos fake)
-  - `handleFinalizeSale` usa **setTimeout simulando API** (não chama nenhum endpoint)
-  - Meios de pagamento **hardcoded** (Dinheiro, PIX, Cartão, Transferência)
-- **Endpoints disponíveis não usados**:
-  - `GET /produtos/{vendedorId}` — para carregar produtos reais
-  - `GET /meiospagamento/{distribuidorId}` — para carregar meios de pagamento reais
-  - `POST /vendaxarope/v2` ou `POST /pedidoxarope/v2` — para enviar a venda
-  - `POST /finaliza_venda/{vendaId}` — para finalizar
-
-#### 10. PendingContracts (`/contracts`)
-- **Arquivo**: [PendingContracts.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/PendingContracts.tsx)
-- **Problema**: Array `contracts` **totalmente hardcoded** (5 contratos fake)
-- **Endpoint disponível não usado**:
-  - `GET /pendencia-contrato/{vendedorId}` — existe no `endpoints.ts` mas **nenhum serviço consome**
-
-#### 11. CustomerHistory (`/customers/history`)
-- **Arquivo**: [CustomerHistory.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/CustomerHistory.tsx)
-- **Problema**: Array `history` **totalmente hardcoded** (4 registros fake)
-- **Endpoint necessário**: Não identificado na API atual — pode ser necessário um endpoint novo ou usar vendas do cliente
-
 ---
 
 ### 🗑️ Páginas Órfãs (sem rota no App.tsx)
 
-| Arquivo | Substituída por | Ação recomendada |
-|---------|----------------|------------------|
-| [PDVSale.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/PDVSale.tsx) | `PDVStandalone` | Deletar |
-| [DeliveryCheckIn.tsx](file:///c:/bystartup/soda-app/src/presentation/pages/DeliveryCheckIn.tsx) | `CheckInScreen` | Deletar |
+*Nenhuma página órfã detectada. (Arquivos `PDVSale.tsx` e `DeliveryCheckIn.tsx` foram removidos)*
 
 ---
+
 
 ## Endpoints Existentes vs Consumo
 
@@ -130,15 +128,15 @@
 | `POST /contratos/v2/cadastro-de-clientes` | ✅ | ✅ CustomerRegistration |
 | `POST /checkin/full/{vendedorId}` | ✅ | ✅ CheckInScreen |
 | `POST /checkin/{vendedorId}` | ✅ | ✅ CheckInScreen |
-| `GET /vendas_vendedor/{vendedorId}` | ✅ | ✅ CustomerList (enriquecimento) |
-| `GET /vendas_pendentes/{vendedorId}` | ✅ | ✅ CustomerList (enriquecimento) |
-| `GET /produtos/{vendedorId}` | ❌ | ❌ **PDV precisa** |
-| `GET /meiospagamento/{distribuidorId}` | ❌ | ❌ **PDV precisa** |
+| `GET /vendas_vendedor/{vendedorId}` | ✅ | ✅ CustomerList, CustomerHistory |
+| `GET /vendas_pendentes/{vendedorId}` | ✅ | ✅ CustomerList |
+| `GET /produtos/{vendedorId}` | ✅ | ✅ PDVStandalone |
+| `GET /meiospagamento/{distribuidorId}` | ✅ | ✅ PDVStandalone |
+| `POST /vendaxarope/v2` | ✅ | ✅ PDVStandalone |
+| `GET /pendencia-contrato/{vendedorId}` | ✅ | ✅ PendingContracts |
+| `POST /pedidoxarope/v2` | ❌ | ❌ |
+| `POST /finaliza_venda/{vendaId}` | ❌ | ❌ |
 | `GET /promocoes/{vendedorId}` | ❌ | ❌ PDV poderia usar |
-| `POST /vendaxarope/v2` | ❌ | ❌ **PDV precisa** |
-| `POST /pedidoxarope/v2` | ❌ | ❌ **PDV precisa** |
-| `POST /finaliza_venda/{vendaId}` | ❌ | ❌ **PDV precisa** |
-| `GET /pendencia-contrato/{vendedorId}` | ❌ | ❌ **PendingContracts precisa** |
 
 ---
 
@@ -146,12 +144,9 @@
 
 ### 🔴 Alta Prioridade (essencial para operação)
 
-1. **PDV — Integração completa** (`/pdv` e `/pdv/delivery`)
-   - Criar `domain/produtos/` (models + services) → endpoint `GET /produtos/{vendedorId}`
-   - Criar `domain/pagamentos/` (models + services) → endpoint `GET /meiospagamento/{distribuidorId}`
-   - Integrar `POST /vendaxarope/v2` no fluxo de finalizar venda
-   - Integrar `POST /finaliza_venda/{vendaId}` se necessário
-   - **Impacto**: Sem isso, nenhuma venda é registrada no sistema
+1. **PDVStandalone — Remover HardCoding** (`/pdv` e `/pdv/delivery`)
+   - **CRÍTICO**: Remover `let vendedorId = 123` em `src/presentation/pages/PDVStandalone.tsx`
+   - Testar fluxo com `vendedorId` vindo do `userStore`.
 
 2. **DeliveriesOverview — Status real das entregas**
    - Integrar status real (não hardcoded `'pending'`)
@@ -160,15 +155,10 @@
 
 ### 🟡 Média Prioridade
 
-3. **PendingContracts — Integrar com API**
-   - Criar service para `GET /pendencia-contrato/{vendedorId}`
-   - Substituir dados hardcoded
+3. **CustomerHistory — Otimização**
+   - Verificar se existe endpoint `/vendas/cliente/{id}` para evitar carregar todas as vendas do vendedor.
 
-4. **CustomerHistory — Integrar com dados reais**
-   - Usar `vendas_vendedor` para montar histórico real do cliente
-   - Ou identificar endpoint específico na API
-
-5. **RoutesScreen — Completar campos parciais**
+4. **RoutesScreen — Completar campos parciais**
    - Calcular `pendingDeliveries` real (cruzando com check-ins)
    - Calcular `priority` real
 

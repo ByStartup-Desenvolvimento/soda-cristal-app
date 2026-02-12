@@ -7,7 +7,8 @@ import { Button } from '../../shared/ui/button';
 import { CheckCircle, MapPin, Droplets, Phone, Calendar, DollarSign, UserX, AlertCircle, RefreshCw } from 'lucide-react';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
 import { Delivery, DeliveryStatusData } from '../../domain/deliveries/models';
-import { RotaEntregaCompleta } from '../../domain/rotas/models';
+import { RotaEntregaCompleta, PrioridadeCliente } from '../../domain/rotas/models';
+import { rotasService } from '../../domain/rotas/services';
 
 interface DeliveriesOverviewProps {
   deliveryStatuses: Record<string, DeliveryStatusData>;
@@ -26,12 +27,33 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
     }
   }, [rotaId, loadClientesRota]);
 
+  const mapPrioridade = (prioridade: PrioridadeCliente): 'high' | 'medium' | 'low' => {
+    switch (prioridade) {
+      case 'urgente': return 'high';
+      case 'normal': return 'medium';
+      case 'baixa': return 'low';
+      default: return 'medium';
+    }
+  };
+
+  const calculateEstimatedTime = (index: number): string => {
+    // Começa às 08:00, adiciona 15 min por cliente
+    const startHour = 8;
+    const minutesPerClient = 15;
+    const totalMinutes = index * minutesPerClient;
+
+    const hour = startHour + Math.floor(totalMinutes / 60);
+    const minute = totalMinutes % 60;
+
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  };
+
   // Adapter: Converter RotaEntregaCompleta (Domínio Rotas) para Delivery (Model UI/Deliveries)
-  const mapClienteToDelivery = (item: RotaEntregaCompleta): Delivery => {
+  const mapClienteToDelivery = (item: RotaEntregaCompleta, index: number): Delivery => {
     return {
-      id: item.rotaentrega.id.toString(),
-      orderId: `PED-${item.rotaentrega.id}`, // Mock
-      orderCode: `SCT-${item.cliente.id}`,   // Mock
+      id: item.rotaentrega.id.toString(), // ID único da entrega na rota
+      orderId: `PED-${item.rotaentrega.id}`,
+      orderCode: `SCT-${item.cliente.id}`,
       customerName: item.cliente.nome,
       customerPhone: item.cliente.telefone || item.cliente.telefone2 || '',
       address: `${item.cliente.endereco}, ${item.cliente.numero} - ${item.cliente.bairro}`,
@@ -39,48 +61,17 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
         quantity: item.rotaentrega.num_garrafas || 0,
         size: '20L' // Padrão
       },
-      status: 'pending', // TODO: Integrar status real
-      priority: 'medium', // TODO: Integrar prioridade real
-      estimatedTime: '08:00', // Mock
+      status: 'pending', // Status base é pendente, UI sobrepõe com deliveryStatuses
+      priority: mapPrioridade(rotasService.calcularPrioridade(item)),
+      estimatedTime: calculateEstimatedTime(index),
       routeName: item.rota.nome,
       notes: item.cliente.observacao
     };
   };
 
-  const mockDeliveries: Delivery[] = [
-    {
-      id: 'mock-001',
-      orderId: 'PED-MOCK-001',
-      orderCode: 'SCT001',
-      customerName: 'Cliente Demo 1',
-      customerPhone: '(11) 99999-1234',
-      address: 'Rua Exemplo, 123 - Centro',
-      bottles: { quantity: 3, size: '20L' },
-      status: 'pending',
-      priority: 'high',
-      estimatedTime: '09:00',
-      routeName: 'Rota Demo',
-      notes: 'Dados de demonstração (API vazia)'
-    },
-    {
-      id: 'mock-002',
-      orderId: 'PED-MOCK-002',
-      orderCode: 'SCT002',
-      customerName: 'Cliente Demo 2',
-      customerPhone: '(11) 99999-5678',
-      address: 'Av. Teste, 456 - Bairro',
-      bottles: { quantity: 2, size: '20L' },
-      status: 'pending',
-      priority: 'medium',
-      estimatedTime: '10:30',
-      routeName: 'Rota Demo'
-    }
-  ];
+  const allDeliveries = clientesRota.map((cliente, index) => mapClienteToDelivery(cliente, index));
 
-  const allDeliveries = clientesRota.length > 0 ? clientesRota.map(mapClienteToDelivery) : mockDeliveries;
-
-  // Como não temos status real de entrega na API de rotas (ainda), 
-  // vamos considerar 'pending' como padrão, ou usar o deliveryStatuses local
+  // Filtragem baseada no status local (check-in realizado ou não)
   const todayDeliveries = allDeliveries.filter(d => {
     const status = deliveryStatuses[d.id]?.checkInStatus;
     return !status || status === undefined; // Se não tem status, é pendente
@@ -167,8 +158,11 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  Hoje
+                  {showCompleted ? 'Finalizado' : delivery.estimatedTime}
                 </span>
+                {delivery.priority === 'high' && !showCompleted && (
+                  <Badge variant="destructive" className="ml-1 text-xs px-1">Prioridade</Badge>
+                )}
                 {checkInStatus && (
                   <>
                     <Badge variant="outline" className={`${checkInStatus.badgeColor} border-0 text-xs ml-1`}>
@@ -257,16 +251,19 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
     );
   }
 
-  // Se não houver rota selecionada nem carregando
-  // if (!rotaAtual && clientesRota.length === 0) {
-  //   return (
-  //     <div className="p-4 flex flex-col items-center justify-center h-[calc(100vh-100px)] text-center space-y-4">
-  //       <MapPin className="w-12 h-12 text-gray-400" />
-  //       <h2 className="text-xl font-semibold text-gray-900">Nenhuma rota selecionada</h2>
-  //       <p className="text-gray-500 max-w-xs">Selecione uma rota na tela anterior para ver as entregas.</p>
-  //     </div>
-  //   )
-  // }
+  // Empty state handling
+  if (!isLoading && clientesRota.length === 0) {
+    // Se não tem clientes da rota carregados, mostra estado vazio ou pede pra selecionar rota
+    // Mas o store deve ter clientes se a rota foi carregada.
+    // Assumindo que o componente pai gerencia seleção de rota
+    return (
+      <div className="p-4 flex flex-col items-center justify-center h-[calc(100vh-100px)] text-center space-y-4">
+        <MapPin className="w-12 h-12 text-gray-400" />
+        <h2 className="text-xl font-semibold text-gray-900">Rota Vazia</h2>
+        <p className="text-gray-500 max-w-xs">Nenhum cliente encontrado para esta rota.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-4 pb-20">

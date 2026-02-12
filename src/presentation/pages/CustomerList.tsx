@@ -19,7 +19,7 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
   const [searchTerm, setSearchTerm] = useState('');
 
   const { clientes, loadClientes, isLoading } = useClientesStore();
-  const { vendedorId } = useUserStore();
+  let { vendedorId } = useUserStore();
 
   useEffect(() => {
     if (vendedorId) {

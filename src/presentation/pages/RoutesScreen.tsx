@@ -10,7 +10,7 @@ import { Rota } from '../../domain/rotas/models';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
 
 interface RouteUI extends Rota {
-  pendingDeliveries: number;
+  pendingDeliveries?: number; // Optional since API doesn't provide it directly in list
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'in-progress' | 'completed';
 }
@@ -24,53 +24,13 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
   const { rotas, isLoading, error, reload } = useRotas();
   const { selectRota } = useRotasStore();
 
-  // Mock data fallback
-  const mockRoutes: RouteUI[] = [
-    {
-      id: 991,
-      nome: 'Rota A - Centro (Demo)',
-      frequencia: 'Segunda e Quarta',
-      observacao: '',
-      ativo: 1,
-      checkin_fechado: 0,
-      cidade_id: 1,
-      pendingDeliveries: 8,
-      priority: 'high',
-      status: 'pending'
-    },
-    {
-      id: 992,
-      nome: 'Rota B - Vila Nova (Demo)',
-      frequencia: 'Terça e Quinta',
-      observacao: '',
-      ativo: 1,
-      checkin_fechado: 0,
-      cidade_id: 1,
-      pendingDeliveries: 6,
-      priority: 'medium',
-      status: 'pending'
-    },
-    {
-      id: 993,
-      nome: 'Rota C - Jardim (Demo)',
-      frequencia: 'Segunda e Quarta',
-      observacao: '',
-      ativo: 1,
-      checkin_fechado: 0,
-      cidade_id: 1,
-      pendingDeliveries: 12,
-      priority: 'high',
-      status: 'pending'
-    }
-  ];
-
   // Adapter para converter Rota do domínio para o formato UI
-  const mappedRoutes: RouteUI[] = rotas.length > 0 ? rotas.map(rota => ({
+  const mappedRoutes: RouteUI[] = rotas.map(rota => ({
     ...rota,
-    pendingDeliveries: 0, // Mockado por enquanto - API não retorna count ainda
-    priority: 'medium',   // Mockado por enquanto
-    status: rota.checkin_fechado ? 'completed' : 'pending'
-  })) : mockRoutes;
+    // pendingDeliveries: 0, // Não temos contagem sem carregar clientes
+    status: rota.checkin_fechado === 1 ? 'completed' : 'pending',
+    priority: 'medium', // Default, já que prioridade é por cliente, não por rota (exceto se derivado)
+  }));
 
   const displayRoutes = mappedRoutes.sort((a, b) => {
     // 1. Status: Pendente/Em Andamento antes de Concluído
