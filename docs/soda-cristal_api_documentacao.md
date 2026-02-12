@@ -269,7 +269,7 @@ Todos os endpoints abaixo são **GET** e requerem os headers padrão.
 
 ### 4.5. Enviar Check-in Único
 - **Endpoint:** `POST /checkin/{vendedor_id}`
-- **URL Completa:** `https://app.sodacristal.com.br/api/checkin/1`
+- **URL Completa:** ` `
 - **Payload:** Um objeto JSON único (não array) com os mesmos campos do check-in full
 ```json
 {

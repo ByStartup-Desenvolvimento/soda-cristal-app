@@ -166,7 +166,7 @@ export default function App() {
             element={
               <CustomerRegistration
                 onBack={() => navigate("/customers")}
-                onSuccess={() => navigate("/contracts")}
+                onSuccess={() => navigate("/customers")}
               />
             }
           />

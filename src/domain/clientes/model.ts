@@ -54,3 +54,56 @@ export interface Clientes {
     produto_preferido?: string;
     tipo_contrato?: string;
 }
+
+// --- Interfaces para Cadastro (POST) ---
+
+import { z } from 'zod';
+
+export const clienteCadastroSchema = z.object({
+    nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
+    cpf_cnpj: z.string().min(11, 'Documento inválido').max(18, 'Documento inválido'),
+    rg: z.string().optional(),
+    data_nascimento: z.string().optional(),
+    telefone: z.string().min(10, 'Telefone inválido'),
+    telefone2: z.string().optional(),
+
+
+    // Endereço
+    cep: z.string().min(8, 'CEP inválido').max(9, 'CEP inválido'),
+    endereco: z.string().min(1, 'Endereço obrigatório'),
+    bairro: z.string().min(1, 'Bairro obrigatório'),
+    numero: z.string().min(1, 'Número obrigatório'),
+    complemento: z.string().optional(),
+
+    // Contrato
+    qtd_garrafa: z.coerce.number().min(1, 'Quantidade mínima é 1'),
+    qtd_garrafa_comprada: z.coerce.number().optional().default(0),
+    dia_reposicao: z.string().min(1, 'Selecione o dia de reposição'),
+    obs: z.string().optional(),
+    rota: z.string().optional().default('Rota Padrão'), // TODO: Pegar rota dinâmica se necessário
+
+    // IDs e Flags
+    vendedor: z.number(),
+    tipo_cadastro: z.number().default(1), // 1 = Novo
+    cliente_id_api: z.number().default(0),
+
+    // Checkboxes / Configs
+    revendedor_xarope: z.boolean().default(false),
+    revendedor_agua: z.boolean().default(false),
+    cf_xarope: z.boolean().default(false),
+    cf_agua: z.boolean().default(false),
+    precoespecial_agua: z.boolean().default(false),
+    precoespecial_xarope: z.boolean().default(false),
+
+    data_inativacao: z.string().default(''),
+});
+
+export type ClienteCadastroPayload = z.infer<typeof clienteCadastroSchema>;
+
+export interface CadastroContratosPayload {
+    contratos: {
+        novosContratos: ClienteCadastroPayload[];
+        alteracaoContrato: ClienteCadastroPayload[]; // Array vazio no cadastro
+        inativacoes: ClienteCadastroPayload[];       // Array vazio no cadastro
+    };
+}

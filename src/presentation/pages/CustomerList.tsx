@@ -134,7 +134,7 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" size="icon" onClick={() => loadClientes(1)} disabled={isLoading}>
+          <Button variant="outline" size="icon" onClick={() => loadClientes(Number(vendedorId))} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           <Button onClick={onAddCustomer} className="bg-blue-600 hover:bg-blue-700">

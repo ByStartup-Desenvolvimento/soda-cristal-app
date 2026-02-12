@@ -1,6 +1,6 @@
 import { clientesService } from '../../shared/api/services/clientesServices'
 import { vendasService } from '../vendas/services'; // Importar serviço de vendas
-import { Clientes } from './model'
+import { Clientes, ClienteCadastroPayload, CadastroContratosPayload } from './model'
 import { Venda } from '../vendas/model';
 
 export const clientesServices = {
@@ -44,5 +44,18 @@ export const clientesServices = {
                     produto_preferido: cliente.produto_preferido || (cliente.cf_agua ? 'Água com Gás 20L' : 'Xarope de Cola'),
                 };
             });
+    },
+
+    async cadastrarCliente(payload: ClienteCadastroPayload) {
+        // Monta a estrutura complexa que a API exige
+        const apiPayload: CadastroContratosPayload = {
+            contratos: {
+                novosContratos: [payload],
+                alteracaoContrato: [],
+                inativacoes: []
+            }
+        };
+
+        return await clientesService.cadastrarCliente(apiPayload);
     }
 }   

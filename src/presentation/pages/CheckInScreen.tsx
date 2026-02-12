@@ -3,8 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../shared/ui/button';
 import { Badge } from '../../shared/ui/badge';
 import { ArrowLeft, MapPin, Clock, CheckCircle, Navigation, Wifi, AlertCircle, ShoppingCart, UserX } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
-
+import { toast } from 'sonner';
+import { checkInService } from '../../domain/checkin/services';
+import { CheckInStatus } from '../../domain/deliveries/models';
+import { formatApiDate } from '../../shared/utils/formatters';
 
 interface CheckInRecord {
   id: string;
@@ -15,8 +17,6 @@ interface CheckInRecord {
   status?: string;
   hadSale?: boolean;
 }
-
-import { CheckInStatus } from '../../domain/deliveries/models';
 
 interface CheckInScreenProps {
   delivery?: any;
@@ -89,17 +89,33 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
   }, []);
 
   const handleCheckIn = async () => {
+    if (!delivery?.id) {
+      toast.error('Dados da entrega incompletos.');
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate API call for check-in
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const vendedorIdStr = localStorage.getItem('vendedorId');
+      if (!vendedorIdStr) {
+        toast.error('Sessão inválida. Faça login novamente.');
+        return;
+      }
+
+      const vendedorId = parseInt(vendedorIdStr);
+      const rotaEntregaId = parseInt(delivery.id.replace('del-', ''));
+      const [lat, lng] = currentLocation.split(', ');
+      const nowFormatted = formatApiDate(new Date());
+
+      // Registro de presença (check-in inicial)
+      await checkInService.registrarPresenca(vendedorId, rotaEntregaId, nowFormatted, lat, lng);
 
       // Show status selection screen
       setShowStatusSelection(true);
 
     } catch (error) {
-      toast.error('Erro ao realizar check-in. Tente novamente.');
+      toast.error('Erro ao realizar check-in. Verifique sua conexão.');
     } finally {
       setIsLoading(false);
     }
@@ -115,39 +131,73 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
     }
   };
 
-  const finishCheckIn = (status: CheckInStatus, hasSale: boolean) => {
-    const now = new Date();
-    const newCheckIn: CheckInRecord = {
-      id: `checkin-${Date.now()}`,
-      timestamp: now.toLocaleString('pt-BR'),
-      location: currentLocation,
-      address: delivery?.address || 'Localização atual',
-      customerName: delivery?.customerName,
-      status: status,
-      hadSale: hasSale
-    };
+  const finishCheckIn = async (status: CheckInStatus, hasSale: boolean) => {
+    setIsLoading(true);
+    try {
+      const vendedorIdStr = localStorage.getItem('vendedorId');
+      if (!vendedorIdStr) throw new Error('Vendedor não encontrado');
 
-    setLastCheckIns(prev => [newCheckIn, ...prev.slice(0, 4)]);
+      const [lat, lng] = currentLocation.split(', ');
+      const rotaEntregaId = parseInt(delivery?.id.replace('del-', '') || '0');
+      const nowFormatted = formatApiDate(new Date());
 
-    const statusMessages = {
-      'delivered': 'Entrega realizada com sucesso!',
-      'no-sale': 'Cliente não quis consumir',
-      'absent-return': 'Cliente ausente - Retornar',
-      'absent-no-return': 'Cliente ausente - Não retornar'
-    };
+      const statusLabels: Record<string, string> = {
+        'delivered': 'Entregue',
+        'no-sale': 'Não quis consumir',
+        'absent-return': 'Ausente - Retornar',
+        'absent-no-return': 'Ausente - Não retornar'
+      };
 
-    if (!hasSale) {
-      toast.success(
-        <div>
-          <p><strong>{statusMessages[status]}</strong></p>
-          <p>Localização: {currentLocation}</p>
-          <p>Horário: {now.toLocaleString('pt-BR')}</p>
-        </div>
-      );
-    }
+      await checkInService.realizarCheckIn({
+        rota_entrega: rotaEntregaId,
+        data_checkin: nowFormatted,
+        vendedor: parseInt(vendedorIdStr),
+        observacao: statusLabels[status] || status,
+        dentro_raio: true,
+        latitude: lat,
+        longitude: lng,
+        quantidade_garrafas: delivery?.bottles?.quantity || 0,
+        quantidade_vendida: status === 'delivered' ? (delivery?.bottles?.quantity || 1) : 0,
+        teve_venda: hasSale
+      });
 
-    if (onCheckInComplete && delivery) {
-      onCheckInComplete(delivery, status, hasSale);
+      const now = new Date();
+      const newCheckIn: CheckInRecord = {
+        id: `checkin-${Date.now()}`,
+        timestamp: now.toLocaleString('pt-BR'),
+        location: currentLocation,
+        address: delivery?.address || 'Localização atual',
+        customerName: delivery?.customerName,
+        status: status,
+        hadSale: hasSale
+      };
+
+      setLastCheckIns(prev => [newCheckIn, ...prev.slice(0, 4)]);
+
+      const statusMessages = {
+        'delivered': 'Entrega realizada com sucesso!',
+        'no-sale': 'Cliente não quis consumir',
+        'absent-return': 'Cliente ausente - Retornar',
+        'absent-no-return': 'Cliente ausente - Não retornar'
+      };
+
+      if (!hasSale) {
+        toast.success(
+          <div>
+            <p><strong>{statusMessages[status]}</strong></p>
+            <p>Localização: {currentLocation}</p>
+            <p>Horário: {now.toLocaleString('pt-BR')}</p>
+          </div>
+        );
+      }
+
+      if (onCheckInComplete && delivery) {
+        onCheckInComplete(delivery, status, hasSale);
+      }
+    } catch (error) {
+      toast.error('Erro ao finalizar atendimento.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
