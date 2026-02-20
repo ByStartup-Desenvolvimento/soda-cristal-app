@@ -7,7 +7,7 @@ export const clientesServices = {
     async getClientesXarope(vendedorId: number): Promise<Clientes[]> {
         // Busca Clientes e Vendas em Paralelo
         const [clientes, vendasVendedor, vendasPendentes] = await Promise.all([
-            clientesService.getClientesXarope(vendedorId),
+            clientesService.getClientesXarope(),
             vendasService.getVendasVendedor(vendedorId).catch(() => [] as Venda[]), // Fallback para array vazio em caso de erro
             vendasService.getVendasPendentes(vendedorId).catch(() => [] as Venda[])
         ]);
