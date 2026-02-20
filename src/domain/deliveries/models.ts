@@ -18,6 +18,8 @@ export interface Delivery {
     completedAt?: string;
     routeName: string;
     notes?: string;
+    latitude?: string;
+    longitude?: string;
 }
 
 export interface DeliveryStatusData {

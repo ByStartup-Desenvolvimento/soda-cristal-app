@@ -18,7 +18,7 @@ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
 export default function App() {
-  const { isLoggedIn, initialzedAuth, isInitialized } = useUserStore();
+  const { isLoggedIn, initialzedAuth, isInitialized, vendedorId } = useUserStore();
   const { setSelectedCustomer, selectedCustomer } = useUiStore();
   const {
     selectedDelivery,
@@ -55,16 +55,16 @@ export default function App() {
             element={
               <DeliveriesOverview
                 deliveryStatuses={deliveryStatuses}
-                onSelectDelivery={(delivery) => {
+                vendedorId={vendedorId!}
+                onSelectDelivery={(delivery, routeDeliveries) => {
                   setSelectedDelivery(delivery);
-                  // Create a route object from the delivery information
                   setSelectedRoute({
-                    id: `route-${delivery.id}`,
+                    id: `route-${delivery.routeName}`,
                     name: delivery.routeName || "Rota Individual",
                     zone:
                       delivery.address.split(" - ")[1] ||
                       "Zona não especificada",
-                    deliveries: [delivery], // Single delivery route
+                    deliveries: routeDeliveries, // Todos os clientes da mesma rota
                   });
                   navigate("/routes/details");
                 }}

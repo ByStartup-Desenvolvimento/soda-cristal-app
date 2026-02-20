@@ -14,9 +14,9 @@ export interface Cliente {
     id: number;
     nome: string;
     cpf_cnpj: string;
-    telefone: string;
-    telefone2?: string;
-    endereco: string;
+    celular: string;
+    celular2?: string;
+    rua: string;
     numero: string;
     complemento?: string;
     bairro: string;

@@ -9,23 +9,21 @@ import { useRotasStore } from '../../domain/rotas/rotasStore';
 import { Delivery, DeliveryStatusData } from '../../domain/deliveries/models';
 import { RotaEntregaCompleta, PrioridadeCliente } from '../../domain/rotas/models';
 import { rotasService } from '../../domain/rotas/services';
+import { formatApiDate, formatPhone } from '@/shared/utils/formatters';
 
 interface DeliveriesOverviewProps {
   deliveryStatuses: Record<string, DeliveryStatusData>;
-  onSelectDelivery: (delivery: Delivery) => void;
-  rotaId?: number; // Optional: pass ID explicitly if needed
+  onSelectDelivery: (delivery: Delivery, routeDeliveries: Delivery[]) => void;
+  vendedorId: number;
 }
 
-export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId }: DeliveriesOverviewProps) {
+export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedorId }: DeliveriesOverviewProps) {
   const [selectedTab, setSelectedTab] = useState('today');
-  const { rotaAtual, clientesRota, isLoading, error, loadClientesRota } = useRotasStore();
+  const { rotaAtual, clientesRota, isLoading, error, loadTodaysRoutes } = useRotasStore();
 
-  // Se rotaId foi passado, carrega a rota
   useEffect(() => {
-    if (rotaId) {
-      loadClientesRota(rotaId);
-    }
-  }, [rotaId, loadClientesRota]);
+    loadTodaysRoutes(vendedorId);
+  }, [vendedorId, loadTodaysRoutes]);
 
   const mapPrioridade = (prioridade: PrioridadeCliente): 'high' | 'medium' | 'low' => {
     switch (prioridade) {
@@ -36,40 +34,43 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
     }
   };
 
-  const calculateEstimatedTime = (index: number): string => {
-    // Começa às 08:00, adiciona 15 min por cliente
-    const startHour = 8;
-    const minutesPerClient = 15;
-    const totalMinutes = index * minutesPerClient;
+  // const calculateEstimatedTime = (index: number): string => {
+  //   // Começa às 08:00, adiciona 15 min por cliente
+  //   const startHour = 8;
+  //   const minutesPerClient = 15;
+  //   const totalMinutes = index * minutesPerClient;
 
-    const hour = startHour + Math.floor(totalMinutes / 60);
-    const minute = totalMinutes % 60;
+  //   const hour = startHour + Math.floor(totalMinutes / 60);
+  //   const minute = totalMinutes % 60;
 
-    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-  };
+  //   return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  // };
 
   // Adapter: Converter RotaEntregaCompleta (Domínio Rotas) para Delivery (Model UI/Deliveries)
-  const mapClienteToDelivery = (item: RotaEntregaCompleta, index: number): Delivery => {
+  const mapClienteToDelivery = (item: RotaEntregaCompleta): Delivery => {
     return {
       id: item.rotaentrega.id.toString(), // ID único da entrega na rota
       orderId: `PED-${item.rotaentrega.id}`,
       orderCode: `SCT-${item.cliente.id}`,
       customerName: item.cliente.nome,
-      customerPhone: item.cliente.telefone || item.cliente.telefone2 || '',
-      address: `${item.cliente.endereco}, ${item.cliente.numero} - ${item.cliente.bairro}`,
+      customerPhone: item.cliente.celular || item.cliente.celular2 || '',
+      address: `${item.cliente.rua}, ${item.cliente.numero} - ${item.cliente.bairro}`,
       bottles: {
         quantity: item.rotaentrega.num_garrafas || 0,
         size: '20L' // Padrão
       },
       status: 'pending', // Status base é pendente, UI sobrepõe com deliveryStatuses
       priority: mapPrioridade(rotasService.calcularPrioridade(item)),
-      estimatedTime: calculateEstimatedTime(index),
+      estimatedTime: formatApiDate(new Date()),
       routeName: item.rota.nome,
-      notes: item.cliente.observacao
+      notes: item.cliente.observacao,
+      latitude: item.cliente.latitude,
+      longitude: item.cliente.longitude,
     };
   };
+  console.log(clientesRota);
 
-  const allDeliveries = clientesRota.map((cliente, index) => mapClienteToDelivery(cliente, index));
+  const allDeliveries = clientesRota.map((cliente) => mapClienteToDelivery(cliente));
 
   // Filtragem baseada no status local (check-in realizado ou não)
   const todayDeliveries = allDeliveries.filter(d => {
@@ -140,7 +141,11 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
         className={`hover:shadow-lg transition-all duration-200 cursor-pointer border-2 ${checkInStatus ? checkInStatus.color : (showCompleted ? 'bg-green-50/50' : 'hover:scale-[1.02]')
           }`}
         style={{ borderColor: checkInStatus ? undefined : (showCompleted ? 'rgba(0, 128, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)') }}
-        onClick={() => onSelectDelivery(delivery)}
+        onClick={() => {
+          // Passa todos os clientes da mesma rota (mesmo routeName)
+          const routeDeliveries = allDeliveries.filter(d => d.routeName === delivery.routeName);
+          onSelectDelivery(delivery, routeDeliveries);
+        }}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
@@ -189,7 +194,7 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
 
           <div className="flex items-center space-x-2">
             <Phone className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">{delivery.customerPhone}</span>
+            <span className="text-sm text-muted-foreground">{formatPhone(delivery.customerPhone)}</span>
           </div>
 
           <div className="flex items-center justify-between">
@@ -244,7 +249,7 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, rotaId 
         <AlertCircle className="w-12 h-12 text-red-500" />
         <h2 className="text-xl font-semibold text-gray-900">Erro ao carregar entregas</h2>
         <p className="text-gray-500 max-w-xs">{error}</p>
-        <Button onClick={() => rotaId && loadClientesRota(rotaId)} variant="outline" className="gap-2">
+        <Button onClick={() => loadTodaysRoutes(vendedorId)} variant="outline" className="gap-2">
           <RefreshCw className="w-4 h-4" /> Tentar Novamente
         </Button>
       </div>

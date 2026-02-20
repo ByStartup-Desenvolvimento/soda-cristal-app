@@ -5,6 +5,7 @@ import { rotasService } from './services';
 interface RotasState {
     // Estado
     rotas: Rota[];
+    rotasDeHoje: Rota[];
     rotaAtual: Rota | null;
     clientesRota: RotaEntregaCompleta[];
     isLoading: boolean;
@@ -12,6 +13,7 @@ interface RotasState {
 
     // Ações
     loadRotas: (vendedorId: number) => Promise<void>;
+    loadTodaysRoutes: (vendedorId: number) => Promise<void>;
     selectRota: (rotaId: number) => void;
     loadClientesRota: (rotaId: number) => Promise<void>;
     clearError: () => void;
@@ -20,6 +22,7 @@ interface RotasState {
 export const useRotasStore = create<RotasState>((set, get) => ({
     // Estado inicial
     rotas: [],
+    rotasDeHoje: [],
     rotaAtual: null,
     clientesRota: [],
     isLoading: false,
@@ -33,6 +36,30 @@ export const useRotasStore = create<RotasState>((set, get) => ({
             set({ rotas, isLoading: false });
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Erro ao carregar rotas';
+            set({ error: message, isLoading: false });
+        }
+    },
+
+    // Carregar as rotas do dia de hoje e acumular todos os clientes
+    loadTodaysRoutes: async (vendedorId: number) => {
+        set({ isLoading: true, error: null, clientesRota: [] });
+        try {
+            const todaysRoutes = await rotasService.getTodaysRoutes(vendedorId);
+            set({ rotasDeHoje: todaysRoutes });
+
+            // Busca clientes de todas as rotas do dia em paralelo
+            const results = await Promise.all(
+                todaysRoutes.map(r => rotasService.getClientesPorRota(r.id))
+            );
+
+            // Achata e reordena por sequência
+            const allClientes = results
+                .flat()
+                .sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
+
+            set({ clientesRota: allClientes, isLoading: false });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Erro ao carregar rotas do dia';
             set({ error: message, isLoading: false });
         }
     },

@@ -9,12 +9,38 @@ import type {
 
 export const rotasService = {
     /**
+     * Retorna o nome do dia da semana atual em pt-BR (ex: "Sexta-Feira")
+     */
+    getTodayWeekday(): string {
+        const days = [
+            'Domingo',
+            'Segunda-Feira',
+            'Terça-Feira',
+            'Quarta-Feira',
+            'Quinta-Feira',
+            'Sexta-Feira',
+            'Sábado',
+        ];
+        return days[new Date().getDay()];
+    },
+
+    /**
      * Busca todas as rotas do vendedor logado
      */
     async getRotasVendedor(vendedorId: number): Promise<Rota[]> {
         const rotas = await rotasApiService.fetchRotasVendedor(vendedorId);
         // Filtrar apenas rotas ativas
         return rotas.filter(r => r.ativo === 1);
+    },
+
+    /**
+     * Busca as rotas do vendedor que correspondem ao dia de hoje
+     * Suporta frequências compostas como "Quarta-Feira e Sábado"
+     */
+    async getTodaysRoutes(vendedorId: number): Promise<Rota[]> {
+        const allRoutes = await this.getRotasVendedor(vendedorId);
+        const today = this.getTodayWeekday();
+        return allRoutes.filter(r => r.frequencia.includes(today));
     },
 
     /**
