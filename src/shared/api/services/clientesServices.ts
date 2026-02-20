@@ -3,8 +3,9 @@ import { ENDPOINTS } from '../endpoints';
 import type { Clientes, CadastroContratosPayload } from '../../../domain/clientes/model'; // Seu modelo
 
 export const clientesService = {
-    getClientesXarope: async (vendedorId: number): Promise<Clientes[]> => {
-        const response = await api.get<Clientes[]>(ENDPOINTS.clientesXarope(vendedorId));
+    getClientesXarope: async (): Promise<Clientes[]> => {
+        const distribuidorId = 1;
+        const response = await api.get<Clientes[]>(ENDPOINTS.clientesXarope(distribuidorId));
         return response.data;
     },
 

@@ -92,7 +92,7 @@ Este documento reúne o mapeamento completo dos endpoints, headers obrigatórios
 - **Resposta:** Mesma estrutura do endpoint `/rotas-entregas`, mas filtrado por rota.
 
 ### 2.4. Buscar Clientes de Xarope
-- **Endpoint:** `GET /clientes/xarope/{vendedor_id}`
+- **Endpoint:** `GET /clientes/xarope/{distribuidor_id}`
 - **URL Completa:** `https://app.sodacristal.com.br/api/clientes/xarope/1`
 - **Descrição:** Retorna clientes habilitados especificamente para compra de xarope.
 

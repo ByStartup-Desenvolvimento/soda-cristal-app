@@ -7,7 +7,7 @@ export const ENDPOINTS = {
     rotasVendedor: (vendedorId: number) => `/rotas/${vendedorId}`,
     rotasEntregas: '/rotas-entregas',
     rotasEntregasRota: (rotaId: number) => `/rotas-entregas/rota/${rotaId}`,
-    clientesXarope: (vendedorId: number) => `/clientes/xarope/${vendedorId}`,
+    clientesXarope: (distribuidorId: number) => `/clientes/xarope/${distribuidorId}`,
 
     // Sincronização (GET)
     produtos: (vendedorId: number) => `/produtos/${vendedorId}`,
