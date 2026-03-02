@@ -169,8 +169,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl" style={{ color: '#008000' }}>Rota: {route.nome}</h1>
-            <p className="text-sm text-muted-foreground">{route.frequencia}</p>
+            <h1 className="text-xl" style={{ color: '#008000' }}>Rota: {route.id}</h1>
+            <p className="text-sm text-muted-foreground">{route.zone}</p>
           </div>
           <Badge variant="outline" className="shadow-sm" style={{ color: '#008000', borderColor: 'rgba(0, 128, 0, 0.3)' }}>
             {pendingDeliveries.length} pendentes
@@ -240,9 +240,10 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
                         </CardTitle>
                       </div>
                       <div className="flex items-center space-x-2 flex-wrap gap-1 text-sm text-muted-foreground ml-8">
-                        <span className="font-medium text-green-700">{route.nome}</span>
+                        <span className="font-medium text-green-700">{route.id}</span>
                         <span className="font-medium text-green-700">-</span>
-                        <span className="font-medium text-green-700">{route.frequencia}</span>
+                        <span className="font-medium text-green-700">{route.zone}</span>
+                        <span className="font-medium text-green-700">•</span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           Hoje
