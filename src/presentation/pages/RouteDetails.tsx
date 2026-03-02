@@ -99,7 +99,6 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       </div>
     );
   }
-  console.log(route);
   const getCheckInStatusInfo = (deliveryId: string) => {
     const statusData = deliveryStatuses[deliveryId];
     if (!statusData || !statusData.checkInStatus) return null;

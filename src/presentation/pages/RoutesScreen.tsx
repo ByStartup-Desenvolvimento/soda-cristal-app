@@ -8,43 +8,75 @@ import { Search, MapPin, Route, AlertCircle, RefreshCw } from 'lucide-react';
 import { useRotas } from '../hooks/useRotas';
 import { Rota } from '../../domain/rotas/models';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
+import type { RotaEntregaCompleta } from '../../domain/rotas/models';
 
 interface RouteUI extends Rota {
-  pendingDeliveries?: number; // Optional since API doesn't provide it directly in list
+  pendingDeliveries: number;
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'in-progress' | 'completed';
+  zone: string;
 }
 
 interface RoutesScreenProps {
   onSelectRoute: (route: any) => void;
 }
 
+/**
+ * Extrai a zona predominante (bairro mais frequente) dos clientes de uma rota
+ */
+function getZoneFromDeliveries(deliveries: RotaEntregaCompleta[]): string {
+  if (deliveries.length === 0) return '';
+
+  const bairroCount: Record<string, number> = {};
+  for (const d of deliveries) {
+    const bairro = d.cliente.bairro?.trim();
+    if (bairro) {
+      bairroCount[bairro] = (bairroCount[bairro] || 0) + 1;
+    }
+  }
+
+  const sorted = Object.entries(bairroCount).sort((a, b) => b[1] - a[1]);
+  return sorted.length > 0 ? sorted[0][0] : '';
+}
+
 export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const { rotas, isLoading, error, reload } = useRotas();
+  const { rotas, isLoading, isLoadingDeliveries, error, reload, deliveriesPorRota } = useRotas();
   const { selectRota } = useRotasStore();
 
   // Adapter para converter Rota do domínio para o formato UI
-  const mappedRoutes: RouteUI[] = rotas.map(rota => ({
-    ...rota,
-    // pendingDeliveries: 0, // Não temos contagem sem carregar clientes
-    status: rota.checkin_fechado === 1 ? 'completed' : 'pending',
-    priority: 'medium', // Default, já que prioridade é por cliente, não por rota (exceto se derivado)
-  }));
+  const mappedRoutes: RouteUI[] = rotas.map(rota => {
+    const deliveries = deliveriesPorRota[rota.id] || [];
+    const zone = getZoneFromDeliveries(deliveries);
+
+
+    return {
+      ...rota,
+      pendingDeliveries: deliveries.length,
+      status: rota.checkin_fechado === 1 ? 'completed' : 'pending',
+      priority: 'medium',
+      zone,
+    };
+  });
 
   const displayRoutes = mappedRoutes.sort((a, b) => {
     // 1. Status: Pendente/Em Andamento antes de Concluído
     if (a.status !== 'completed' && b.status === 'completed') return -1;
     if (a.status === 'completed' && b.status !== 'completed') return 1;
 
-    // 2. Ordem alfabética ou Numérica (caso o nome seja número)
+    // 2. Ordem alfabética ou Numérica
     return a.nome.localeCompare(b.nome, undefined, { numeric: true });
   });
 
   const filteredRoutes = displayRoutes.filter(route =>
     route.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (route.frequencia && route.frequencia.toLowerCase().includes(searchTerm.toLowerCase()))
+    (route.frequencia && route.frequencia.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (route.zone && route.zone.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Contadores globais
+  const totalPendingRoutes = filteredRoutes.filter(r => r.status === 'pending').length;
+  const totalDeliveries = filteredRoutes.reduce((sum, r) => sum + r.pendingDeliveries, 0);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -108,7 +140,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Rotas Disponíveis</h1>
         <p className="text-sm text-muted-foreground">
-          {filteredRoutes.filter(r => r.status === 'pending').length} rotas pendentes
+          {totalPendingRoutes} rotas pendentes • {totalDeliveries} entregas totais
         </p>
       </div>
 
@@ -116,7 +148,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
       <div className="relative">
         <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar por nome da rota..."
+          placeholder="Buscar por nome da rota ou zona..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -143,11 +175,13 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
                 <div className="space-y-1">
                   <CardTitle className="text-lg flex items-center">
                     <Route className="w-5 h-5 mr-2" style={{ color: '#008000' }} />
-                    {route.nome}
+                    {route.nome} ({route.frequencia || 'Sem frequência'})
                   </CardTitle>
                   <div className="flex items-center space-x-2">
                     <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">{route.frequencia || 'Sem frequência definida'}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {route.zone || 'Zona não definida'}
+                    </span>
                   </div>
                 </div>
                 <div className="flex flex-col space-y-1">
@@ -159,6 +193,22 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
             </CardHeader>
 
             <CardContent className="space-y-3">
+              {/* Delivery Count */}
+              <div className="flex items-center space-x-3 p-3 rounded-lg" style={{ background: 'linear-gradient(135deg, rgba(0, 128, 0, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)' }}>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md"
+                  style={{ background: 'linear-gradient(135deg, #008000 0%, #00a000 100%)' }}
+                >
+                  {isLoadingDeliveries ? '...' : route.pendingDeliveries}
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  {isLoadingDeliveries
+                    ? 'Carregando entregas...'
+                    : `${route.pendingDeliveries} entregas pendentes`
+                  }
+                </span>
+              </div>
+
               {/* Action Button */}
               {route.status === 'pending' && (
                 <div className="pt-2 border-t">
