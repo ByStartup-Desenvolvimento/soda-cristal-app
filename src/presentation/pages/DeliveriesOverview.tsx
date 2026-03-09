@@ -68,7 +68,6 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
       longitude: item.cliente.longitude,
     };
   };
-  console.log(clientesRota);
 
   const allDeliveries = clientesRota.map((cliente) => mapClienteToDelivery(cliente));
 

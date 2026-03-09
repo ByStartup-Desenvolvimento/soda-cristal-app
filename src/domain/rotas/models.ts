@@ -33,6 +33,8 @@ export interface Cliente {
     cf_xarope: boolean;
     precoespecial_agua: boolean;
     precoespecial_xarope: boolean;
+    endereco?: string;
+    telefone?: number;
 }
 
 // Modelo de RotaEntrega (relacionamento entre rota e cliente)
@@ -76,7 +78,7 @@ export interface ClienteCardView {
     rotaNome: string;
     horario: string;
     endereco: string;
-    telefone: string;
+    telefone?: number;
     garrafas: number;
     observacao?: string;
     prioridade: PrioridadeCliente;
