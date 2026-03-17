@@ -41,7 +41,7 @@ export function useRotas() {
         isLoadingDeliveries,
         error,
         deliveriesPorRota,
-        reload: () => vendedorId && loadRotas(vendedorId),
+        reload: () => vendedorId ? loadRotas(vendedorId, true) : undefined,
         clearError,
     };
 }

@@ -36,11 +36,36 @@ export const rotasService = {
     /**
      * Busca as rotas do vendedor que correspondem ao dia de hoje
      * Suporta frequências compostas como "Quarta-Feira e Sábado"
+     * Suporta também ranges como "Seg a sexta" ou "Segunda a sábado"
      */
     async getTodaysRoutes(vendedorId: number): Promise<Rota[]> {
         const allRoutes = await this.getRotasVendedor(vendedorId);
+        const dayIndex = new Date().getDay(); // 0 a 6 (Domingo a Sábado)
         const today = this.getTodayWeekday();
-        return allRoutes.filter(r => r.frequencia.includes(today));
+
+        return allRoutes.filter(r => {
+            const freq = r.frequencia?.toLowerCase() || '';
+
+            // Se for string de intervalo "Seg a Sexta" ou similar (1 a 5)
+            // ex: "Seg a sexta", "Segunda a Sexta-feira", etc.
+            if (freq.includes('seg') && freq.includes('a') && (freq.includes('sex') || freq.includes('sexta'))) {
+                // Se hoje é segunda(1), terça(2), quarta(3), quinta(4) ou sexta(5)
+                if (dayIndex >= 1 && dayIndex <= 5) {
+                    return true;
+                }
+            }
+
+            // Se for string de intervalo "Segunda a Sábado" (1 a 6)
+            if (freq.includes('seg') && freq.includes('a') && (freq.includes('sab') || freq.includes('sáb') || freq.includes('sábado'))) {
+                // Se hoje é segunda(1) a sábado(6)
+                if (dayIndex >= 1 && dayIndex <= 6) {
+                    return true;
+                }
+            }
+
+            // Fallback para strings exatas (Ex: "Terça-Feira")
+            return r.frequencia?.includes(today);
+        });
     },
 
     /**
