@@ -21,7 +21,6 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
   const { clientes, loadClientes, isLoading } = useClientesStore();
   let { vendedorId } = useUserStore();
   let { distribuidorId } = useUserStore();
-  console.log(distribuidorId);
 
   useEffect(() => {
     if (distribuidorId) {
@@ -37,7 +36,7 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
       phone: '(11) 99999-1234',
       address: 'Rua das Flores, 123 - Centro',
       contractType: 'Comodato Semanal',
-      bottleSize: '20L',
+      bottleSize: '1,5 L',
       status: 'ativo',
       lastDelivery: '2024-01-17',
       nextDelivery: '2024-01-24'
@@ -59,7 +58,7 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
       phone: '(11) 99999-9012',
       address: 'Rua Nova, 789 - Vila Nova',
       contractType: 'Comodato Quinzenal',
-      bottleSize: '20L',
+      bottleSize: '1,5 L',
       status: 'ativo',
       lastDelivery: '2024-01-03',
       nextDelivery: '2024-01-17'
@@ -104,9 +103,6 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
     customer.phone.includes(searchTerm) ||
     customer.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  console.log(filteredCustomers.length);
-
 
   const getStatusColor = (status: string) => {
     switch (status) {

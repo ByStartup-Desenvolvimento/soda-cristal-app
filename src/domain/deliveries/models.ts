@@ -20,6 +20,8 @@ export interface Delivery {
     notes?: string;
     latitude?: string;
     longitude?: string;
+    diasSemAtendimento?: number;
+    diasSemConsumo?: number;
 }
 
 export interface DeliveryStatusData {

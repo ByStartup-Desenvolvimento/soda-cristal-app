@@ -4,7 +4,7 @@ import { Button } from '../../shared/ui/button';
 import { Badge } from '../../shared/ui/badge';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '../../shared/ui/sheet';
 import { Skeleton } from '../../shared/ui/skeleton';
-import { ArrowLeft, MapPin, Droplets, Phone, Clock, CheckCircle, ShoppingCart, UserX, AlertCircle, DollarSign, Calendar } from 'lucide-react';
+import { ArrowLeft, MapPin, Droplets, Phone, CheckCircle, ShoppingCart, UserX, AlertCircle, DollarSign, Calendar } from 'lucide-react';
 import { formatPhone, formatApiDate } from '@/shared/utils/formatters';
 
 import { Delivery, DeliveryStatusData } from '../../domain/deliveries/models';
@@ -61,7 +61,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       address: `${item.cliente.rua}, ${item.cliente.numero} - ${item.cliente.bairro}`,
       bottles: {
         quantity: item.rotaentrega.num_garrafas || 0,
-        size: '20L'
+        size: '1,5 L'
       },
       status: 'pending',
       priority: mapPrioridade(rotasService.calcularPrioridade(item)),
@@ -70,6 +70,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       notes: item.cliente.observacao,
       latitude: item.cliente.latitude,
       longitude: item.cliente.longitude,
+      diasSemAtendimento: item.diassematendimento?.length || 0,
+      diasSemConsumo: item.diassemconsumo?.length || 0,
     };
   };
 
@@ -144,6 +146,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
   // Uma entrega é "pendente" se não tiver checkInStatus registrado
   const pendingDeliveries = deliveries.filter(d => !deliveryStatuses[d.id]?.checkInStatus);
   const completedDeliveries = deliveries.filter(d => !!deliveryStatuses[d.id]?.checkInStatus);
+  console.log(deliveries);
 
   const openGPS = (delivery: Delivery) => {
     if (delivery.latitude && delivery.longitude) {
@@ -265,10 +268,14 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col space-y-1 items-end">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{delivery.estimatedTime}</span>
+                    <div className="flex flex-col space-y-1 items-end mt-1">
+                      <div className="flex items-center space-x-1" title="Dias sem atendimento">
+                        <UserX className="w-3 h-3 text-red-400" />
+                        <span className="text-xs text-muted-foreground">{delivery.diasSemAtendimento ?? 0} dias</span>
+                      </div>
+                      <div className="flex items-center space-x-1" title="Dias sem consumo">
+                        <ShoppingCart className="w-3 h-3 text-yellow-500" />
+                        <span className="text-xs text-muted-foreground">{delivery.diasSemConsumo ?? 0} dias</span>
                       </div>
                     </div>
                   </div>
@@ -292,7 +299,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
                     </span>
                   </div>
 
-                  {delivery.notes && (
+                  {(delivery.notes && delivery.notes !== 'null' && delivery.notes.trim() !== '') && (
                     <div className="border-2 rounded-lg p-2.5" style={{ background: 'rgba(251, 191, 36, 0.08)', borderColor: 'rgba(251, 191, 36, 0.3)' }}>
                       <p className="text-sm" style={{ color: '#92400e' }}>
                         <strong>Observação:</strong> {delivery.notes}

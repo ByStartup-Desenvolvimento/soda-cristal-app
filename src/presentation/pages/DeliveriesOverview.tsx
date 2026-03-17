@@ -4,22 +4,22 @@ import { Badge } from '../../shared/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui/tabs';
 import { Skeleton } from '../../shared/ui/skeleton';
 import { Button } from '../../shared/ui/button';
-import { CheckCircle, MapPin, Droplets, Phone, Calendar, DollarSign, UserX, AlertCircle, RefreshCw, Clock } from 'lucide-react';
+import { CheckCircle, MapPin, Calendar, AlertCircle, RefreshCw, Route } from 'lucide-react';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
 import { Delivery, DeliveryStatusData } from '../../domain/deliveries/models';
 import { RotaEntregaCompleta, PrioridadeCliente } from '../../domain/rotas/models';
 import { rotasService } from '../../domain/rotas/services';
-import { formatApiDate, formatPhone } from '@/shared/utils/formatters';
+import { formatApiDate } from '@/shared/utils/formatters';
 
 interface DeliveriesOverviewProps {
   deliveryStatuses: Record<string, DeliveryStatusData>;
-  onSelectDelivery: (delivery: Delivery, routeDeliveries: Delivery[]) => void;
+  onSelectRoute: (route: any) => void;
   vendedorId: number;
 }
 
-export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedorId }: DeliveriesOverviewProps) {
+export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId }: DeliveriesOverviewProps) {
   const [selectedTab, setSelectedTab] = useState('today');
-  const { rotaAtual, clientesRota, isLoading, error, loadTodaysRoutes } = useRotasStore();
+  const { clientesRota, rotasDeHoje, isLoading, error, loadTodaysRoutes, selectRota } = useRotasStore();
 
   useEffect(() => {
     loadTodaysRoutes(vendedorId);
@@ -57,7 +57,7 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
       address: `${item.cliente.rua}, ${item.cliente.numero} - ${item.cliente.bairro}`,
       bottles: {
         quantity: item.rotaentrega.num_garrafas || 0,
-        size: '20L' // Padrão
+        size: '1,5 L' // Padrão
       },
       status: 'pending', // Status base é pendente, UI sobrepõe com deliveryStatuses
       priority: mapPrioridade(rotasService.calcularPrioridade(item)),
@@ -66,11 +66,13 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
       notes: item.cliente.observacao,
       latitude: item.cliente.latitude,
       longitude: item.cliente.longitude,
+      diasSemAtendimento: item.diassematendimento?.length || 0,
+      diasSemConsumo: item.diassemconsumo?.length || 0,
     };
   };
 
   const allDeliveries = clientesRota.map((cliente) => mapClienteToDelivery(cliente));
-
+  
   // Filtragem baseada no status local (check-in realizado ou não)
   const todayDeliveries = allDeliveries.filter(d => {
     const status = deliveryStatuses[d.id]?.checkInStatus;
@@ -82,149 +84,180 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
     return status !== undefined; // Se tem status, está concluído/processado
   });
 
-  const getCheckInStatusInfo = (deliveryId: string) => {
-    const statusData = deliveryStatuses[deliveryId];
-    if (!statusData || !statusData.checkInStatus) return null;
-
-    switch (statusData.checkInStatus) {
-      case 'delivered':
-        return {
-          color: 'bg-green-100 border-green-300',
-          textColor: 'text-green-800',
-          badgeColor: 'bg-green-600 text-white',
-          label: 'Entregue',
-          icon: CheckCircle
-        };
-      case 'no-sale':
-        return {
-          color: 'bg-gray-100 border-gray-300',
-          textColor: 'text-gray-800',
-          badgeColor: 'bg-gray-600 text-white',
-          label: 'Não quis consumir',
-          icon: UserX
-        };
-      case 'absent-return':
-        return {
-          color: 'bg-yellow-100 border-yellow-300',
-          textColor: 'text-yellow-800',
-          badgeColor: 'bg-yellow-600 text-white',
-          label: 'Ausente - Retornar',
-          icon: AlertCircle
-        };
-      case 'absent-no-return':
-        return {
-          color: 'bg-red-100 border-red-300',
-          textColor: 'text-red-800',
-          badgeColor: 'bg-red-600 text-white',
-          label: 'Ausente - Não retornar',
-          icon: UserX
-        };
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-blue-50 text-blue-700 border-blue-300 shadow-sm';
+      case 'in-progress':
+        return 'bg-orange-50 text-orange-700 border-orange-300 shadow-sm';
+      case 'completed':
+        return 'bg-green-50 text-green-700 border-green-300 shadow-sm';
       default:
-        return null;
+        return 'bg-gray-50 text-gray-700 border-gray-300 shadow-sm';
     }
   };
 
-  const formatCompletedTime = (timestamp?: string) => {
-    if (!timestamp) return '--:--';
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pendente';
+      case 'in-progress':
+        return 'Em Andamento';
+      case 'completed':
+        return 'Concluída';
+      default:
+        return status;
+    }
   };
 
-  const renderDeliveryCard = (delivery: Delivery, showCompleted = false) => {
-    const checkInStatus = getCheckInStatusInfo(delivery.id);
-    const statusData = deliveryStatuses[delivery.id];
+  const mappedRoutes = rotasDeHoje.map(rota => {
 
+    const routeDeliveries = clientesRota.filter(c => c.rota.id === rota.id).map(mapClienteToDelivery);
+
+    // Predominant zone
+    const bairroCount: Record<string, number> = {};
+    const deliveriesInRoute = clientesRota.filter(c => c.rota.id === rota.id);
+    for (const d of deliveriesInRoute) {
+      const bairro = d.cliente.bairro?.trim();
+      if (bairro) {
+        bairroCount[bairro] = (bairroCount[bairro] || 0) + 1;
+      }
+    }
+    const sortedZonas = Object.entries(bairroCount).sort((a, b) => b[1] - a[1]);
+    const zone = sortedZonas.length > 0 ? sortedZonas[0][0] : '';
+
+    const pendingDeliveriesCount = routeDeliveries.filter(d => !deliveryStatuses[d.id]?.checkInStatus).length;
+    const totalDeliveriesCount = routeDeliveries.length;
+
+    let status = 'pending';
+    if (totalDeliveriesCount > 0 && pendingDeliveriesCount === 0) {
+      status = 'completed';
+    } else if (totalDeliveriesCount > 0 && pendingDeliveriesCount < totalDeliveriesCount) {
+      status = 'in-progress';
+    }
+    // Removido o filtro que usava rota.checkin_fechado === 1
+
+    return {
+      ...rota,
+      id: rota.id,
+      name: rota.nome,
+      zone,
+      pendingDeliveries: pendingDeliveriesCount,
+      totalDeliveries: totalDeliveriesCount,
+      deliveries: routeDeliveries,
+      status
+    };
+  });
+
+  // Todas as rotas do dia agora ficam na aba principal, independente se estão concluídas na API ou não.
+  // A aba 'completed' mostrará apenas as rotas onde TODOS os clientes foram atendidos (no app do celular).
+  const pendingRoutes = mappedRoutes.filter(r => r.status !== 'completed');
+  const completedRoutes = mappedRoutes.filter(r => r.status === 'completed');
+
+  const renderRouteCard = (route: any, showCompleted = false) => {
     return (
       <Card
-        key={delivery.id}
-        className={`hover:shadow-lg transition-all duration-200 cursor-pointer border-2 ${checkInStatus ? checkInStatus.color : (showCompleted ? 'bg-green-50/50' : 'hover:scale-[1.02]')
+        key={route.id}
+        className={`hover:shadow-lg transition-all duration-200 cursor-pointer border-2 ${route.status === 'completed' ? 'opacity-75' : 'hover:scale-[1.01]'
           }`}
-        style={{ borderColor: checkInStatus ? undefined : (showCompleted ? 'rgba(0, 128, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)') }}
+        style={{ borderColor: route.status === 'completed' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 128, 0, 0.15)' }}
         onClick={() => {
-          // Passa todos os clientes da mesma rota (mesmo routeName)
-          const routeDeliveries = allDeliveries.filter(d => d.routeName === delivery.routeName);
-          onSelectDelivery(delivery, routeDeliveries);
+          if (route.status !== 'completed' || showCompleted) {
+            selectRota(route.id);
+            onSelectRoute({
+              id: `route-${route.name}`,
+              name: route.name,
+              zone: route.zone,
+              deliveries: route.deliveries
+            });
+          }
         }}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                {checkInStatus && (() => {
-                  const StatusIcon = checkInStatus.icon;
-                  return <StatusIcon className={`w-5 h-5 ${checkInStatus.textColor}`} />;
-                })()}
-                {!checkInStatus && showCompleted && <CheckCircle className="w-5 h-5" style={{ color: '#008000' }} />}
-                {delivery.customerName}
+              <CardTitle className="text-lg flex items-center">
+                <Route className="w-5 h-5 mr-2" style={{ color: '#008000' }} />
+                {route.nome} ({route.frequencia || 'Sem frequência'})
               </CardTitle>
-              <div className="flex items-center space-x-2 flex-wrap gap-1 text-sm text-muted-foreground">
-                <span className="font-medium text-green-700">{delivery.routeName}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  Hoje
+              <div className="flex items-center space-x-2">
+                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {route.zone || 'Zona não definida'}
                 </span>
-                {delivery.priority === 'high' && !showCompleted && (
-                  <Badge variant="destructive" className="ml-1 text-xs px-1">Prioridade</Badge>
-                )}
-                {checkInStatus && (
-                  <>
-                    <Badge variant="outline" className={`${checkInStatus.badgeColor} border-0 text-xs ml-1`}>
-                      {checkInStatus.label}
-                    </Badge>
-                    {statusData?.hadSale && (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-300">
-                        <DollarSign className="w-3 h-3 mr-0.5" />
-                        Venda
-                      </Badge>
-                    )}
-                  </>
-                )}
               </div>
             </div>
-            <div className="flex flex-col space-y-1 items-end">
-              <div className="flex items-center space-x-1">
-                <Clock className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{delivery.estimatedTime}</span>
-              </div>
+            <div className="flex flex-col space-y-1">
+              <Badge variant="outline" className={getStatusColor(route.status)}>
+                {getStatusLabel(route.status)}
+              </Badge>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">{delivery.address}</span>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Phone className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">{formatPhone(delivery.customerPhone)}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Droplets className="w-4 h-4" style={{ color: '#06b6d4' }} />
-              <span className="text-sm">
-                {delivery.bottles.quantity} garrafas de {delivery.bottles.size}
-              </span>
+          {/* Delivery Count */}
+          <div className="flex items-center space-x-3 p-3 rounded-lg" style={{ background: 'linear-gradient(135deg, rgba(0, 128, 0, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)' }}>
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-md ${showCompleted ? 'text-green-800' : 'text-white'}`}
+              style={{ background: showCompleted ? 'rgba(0, 128, 0, 0.2)' : 'linear-gradient(135deg, #008000 0%, #00a000 100%)' }}
+            >
+              {route.pendingDeliveries}
             </div>
+            <span className="text-sm font-medium text-gray-700">
+              {route.pendingDeliveries} entregas pendentes ({route.totalDeliveries} total)
+            </span>
           </div>
 
-          {delivery.notes && (
-            <div className="border-2 rounded-lg p-2.5" style={{ background: 'rgba(251, 191, 36, 0.08)', borderColor: 'rgba(251, 191, 36, 0.3)' }}>
-              <p className="text-sm" style={{ color: '#92400e' }}>
-                <strong>Observação:</strong> {delivery.notes}
-              </p>
+          {/* Action Button */}
+          {route.status === 'pending' && (
+            <div className="pt-2 border-t">
+              <Button
+                className="w-full shadow-md hover:shadow-lg transition-all duration-200"
+                style={{ background: 'linear-gradient(135deg, #008000 0%, #00a000 100%)' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectRota(route.id);
+                  onSelectRoute({
+                    id: `route-${route.name}`,
+                    name: route.name,
+                    zone: route.zone,
+                    deliveries: route.deliveries
+                  });
+                }}
+              >
+                Ver Detalhes da Rota
+              </Button>
             </div>
           )}
 
-          {showCompleted && statusData?.timestamp && (
-            <div className="pt-2 border-t rounded-lg p-2.5 -mx-2 -mb-2" style={{ background: 'linear-gradient(135deg, rgba(0, 128, 0, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)' }}>
-              <div className="flex items-center justify-center space-x-2">
-                <CheckCircle className="w-4 h-4" style={{ color: '#008000' }} />
+          {route.status === 'in-progress' && (
+            <div className="pt-2 border-t">
+              <Button
+                variant="outline"
+                className="w-full border-2 shadow-sm hover:shadow-md transition-all"
+                style={{ borderColor: '#f59e0b', color: '#92400e' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectRota(route.id);
+                  onSelectRoute({
+                    id: `route-${route.name}`,
+                    name: route.name,
+                    zone: route.zone,
+                    deliveries: route.deliveries
+                  });
+                }}
+              >
+                Continuar Rota
+              </Button>
+            </div>
+          )}
+
+          {route.status === 'completed' && (
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-center p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, rgba(0, 128, 0, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)' }}>
                 <span className="text-sm" style={{ color: '#006600' }}>
-                  Concluída em {formatCompletedTime(statusData.timestamp)}
+                  ✓ Rota Concluída
                 </span>
               </div>
             </div>
@@ -254,7 +287,7 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
         <AlertCircle className="w-12 h-12 text-red-500" />
         <h2 className="text-xl font-semibold text-gray-900">Erro ao carregar entregas</h2>
         <p className="text-gray-500 max-w-xs">{error}</p>
-        <Button onClick={() => loadTodaysRoutes(vendedorId)} variant="outline" className="gap-2">
+        <Button onClick={() => loadTodaysRoutes(vendedorId, true)} variant="outline" className="gap-2">
           <RefreshCw className="w-4 h-4" /> Tentar Novamente
         </Button>
       </div>
@@ -262,15 +295,12 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
   }
 
   // Empty state handling
-  if (!isLoading && clientesRota.length === 0) {
-    // Se não tem clientes da rota carregados, mostra estado vazio ou pede pra selecionar rota
-    // Mas o store deve ter clientes se a rota foi carregada.
-    // Assumindo que o componente pai gerencia seleção de rota
+  if (!isLoading && rotasDeHoje.length === 0) {
     return (
       <div className="p-4 flex flex-col items-center justify-center h-[calc(100vh-100px)] text-center space-y-4">
         <MapPin className="w-12 h-12 text-gray-400" />
-        <h2 className="text-xl font-semibold text-gray-900">Rota Vazia</h2>
-        <p className="text-gray-500 max-w-xs">Nenhum cliente encontrado para esta rota.</p>
+        <h2 className="text-xl font-semibold text-gray-900">Nenhuma Rota Hoje</h2>
+        <p className="text-gray-500 max-w-xs">Você não possui rotas programadas para o dia de hoje.</p>
       </div>
     );
   }
@@ -279,9 +309,9 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
     <div className="p-4 space-y-4 pb-20">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">{rotaAtual ? rotaAtual.nome : 'Minha Rota'}</h1>
+        <h1 className="text-2xl font-semibold">Minhas Rotas de Hoje</h1>
         <p className="text-sm text-muted-foreground">
-          {rotaAtual?.frequencia || 'Acompanhe seus clientes programados'}
+          Acompanhe suas rotas programadas
         </p>
       </div>
 
@@ -331,14 +361,14 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
         </TabsList>
 
         <TabsContent value="today" className="space-y-3 mt-4">
-          {todayDeliveries.length === 0 ? (
+          {pendingRoutes.length === 0 ? (
             <Card className="text-center py-8">
               <CardContent>
                 <div className="space-y-2">
                   <Calendar className="w-12 h-12 text-muted-foreground mx-auto" />
-                  <h3 className="text-lg font-medium">Nenhum cliente na rota</h3>
+                  <h3 className="text-lg font-medium">Nenhuma rota pendente</h3>
                   <p className="text-sm text-muted-foreground">
-                    Seus clientes aparecerão aqui quando a rota for iniciada
+                    Você concluiu todas as suas rotas de hoje!
                   </p>
                 </div>
               </CardContent>
@@ -347,25 +377,25 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
             <>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm text-muted-foreground">
-                  Listando {todayDeliveries.length} clientes
+                  Listando {pendingRoutes.length} rotas pendentes
                 </p>
               </div>
-              {todayDeliveries
-                .map(delivery => renderDeliveryCard(delivery))
+              {pendingRoutes
+                .map(route => renderRouteCard(route))
               }
             </>
           )}
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-3 mt-4">
-          {completedDeliveries.length === 0 ? (
+          {completedRoutes.length === 0 ? (
             <Card className="text-center py-8">
               <CardContent>
                 <div className="space-y-2">
                   <CheckCircle className="w-12 h-12 text-muted-foreground mx-auto" />
-                  <h3 className="text-lg font-medium">Nenhum atendimento realizado</h3>
+                  <h3 className="text-lg font-medium">Nenhuma rota concluída</h3>
                   <p className="text-sm text-muted-foreground">
-                    Seus atendimentos concluídos aparecerão aqui
+                    Suas rotas finalizadas aparecerão aqui
                   </p>
                 </div>
               </CardContent>
@@ -374,17 +404,11 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectDelivery, vendedo
             <>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm text-muted-foreground">
-                  {completedDeliveries.length} atendimentos realizados hoje
+                  {completedRoutes.length} rotas concluídas hoje
                 </p>
               </div>
-              {completedDeliveries
-                .sort((a, b) => {
-                  const tsA = deliveryStatuses[a.id]?.timestamp;
-                  const tsB = deliveryStatuses[b.id]?.timestamp;
-                  if (tsA && tsB) return new Date(tsB).getTime() - new Date(tsA).getTime();
-                  return 0;
-                })
-                .map(delivery => renderDeliveryCard(delivery, true))
+              {completedRoutes
+                .map(route => renderRouteCard(route, true))
               }
             </>
           )}
