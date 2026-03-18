@@ -34,6 +34,7 @@ interface RouteDetailsProps {
 export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpenPDV }: RouteDetailsProps) {
   const [_selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
   const { loadClientesRota, clientesRota, isLoading } = useRotasStore();
+  console.log(route);
 
   useEffect(() => {
     if (route && (!route.deliveries || route.deliveries.length === 0)) {
