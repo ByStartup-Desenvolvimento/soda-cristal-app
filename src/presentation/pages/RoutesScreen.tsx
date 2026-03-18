@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../shared/ui/card';
 import { Badge } from '../../shared/ui/badge';
 import { Input } from '../../shared/ui/input';
 import { Button } from '../../shared/ui/button';
-import { Skeleton } from '../../shared/ui/skeleton';
-import { Search, MapPin, Route, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, MapPin, Route, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useRotas } from '../hooks/useRotas';
 import { Rota } from '../../domain/rotas/models';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
@@ -41,7 +40,7 @@ function getZoneFromDeliveries(deliveries: RotaEntregaCompleta[]): string {
 
 export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const { rotas, isLoading, isLoadingDeliveries, error, reload, deliveriesPorRota } = useRotas();
+  const { rotas, isLoading, isLoadingDeliveries, loadingProgress, error, reload, deliveriesPorRota } = useRotas();
   const { selectRota } = useRotasStore();
 
   // Adapter para converter Rota do domínio para o formato UI
@@ -53,7 +52,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
     return {
       ...rota,
       pendingDeliveries: deliveries.length,
-      status: rota.checkin_fechado === 1 ? 'completed' : 'pending',
+      status: 'pending', // Forçar todas as rotas como pendentes para liberar o botão de detalhes
       priority: 'medium',
       zone,
     };
@@ -106,16 +105,16 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-4 pb-20">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
+      <div className="p-4 flex flex-col items-center justify-center h-[calc(100vh-100px)] text-center space-y-6">
+        <div className="relative">
+          <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-20 animate-pulse" />
+          <Loader2 className="w-16 h-16 text-green-600 animate-spin relative" />
         </div>
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 w-full rounded-xl" />
-          ))}
+        
+        <div className="space-y-4 max-w-[250px] w-full">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Buscando rotas...
+          </h2>
         </div>
       </div>
     );
@@ -143,6 +142,26 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
           {totalPendingRoutes} rotas pendentes • {totalDeliveries} entregas totais
         </p>
       </div>
+
+      {/* Progress Bar Inline (Non-blocking) */}
+      {isLoadingDeliveries && loadingProgress && loadingProgress.total > 0 && (
+        <Card className="border-green-200 bg-green-50 shadow-sm animate-in fade-in slide-in-from-top-4">
+          <CardContent className="p-3">
+            <div className="flex items-center space-x-3 mb-2">
+              <Loader2 className="w-4 h-4 text-green-600 animate-spin" />
+              <p className="text-sm text-green-800 font-medium">
+                Sincronizando entregas ({loadingProgress.current} de {loadingProgress.total})
+              </p>
+            </div>
+            <div className="h-2 w-full bg-green-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500 transition-all duration-300 ease-out"
+                style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search */}
       <div className="relative">

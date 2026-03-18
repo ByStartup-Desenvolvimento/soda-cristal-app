@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shared/ui/card';
 import { Badge } from '../../shared/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../shared/ui/tabs';
-import { Skeleton } from '../../shared/ui/skeleton';
 import { Button } from '../../shared/ui/button';
-import { CheckCircle, MapPin, Calendar, AlertCircle, RefreshCw, Route } from 'lucide-react';
+import { CheckCircle, MapPin, Calendar, AlertCircle, RefreshCw, Route, Loader2 } from 'lucide-react';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
 import { Delivery, DeliveryStatusData } from '../../domain/deliveries/models';
 import { RotaEntregaCompleta, PrioridadeCliente } from '../../domain/rotas/models';
@@ -19,7 +18,16 @@ interface DeliveriesOverviewProps {
 
 export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId }: DeliveriesOverviewProps) {
   const [selectedTab, setSelectedTab] = useState('today');
-  const { clientesRota, rotasDeHoje, isLoading, error, loadTodaysRoutes, selectRota } = useRotasStore();
+  const { 
+    clientesRota, 
+    rotasDeHoje, 
+    isLoading, 
+    loadingStep, 
+    loadingProgress, 
+    error, 
+    loadTodaysRoutes, 
+    selectRota 
+  } = useRotasStore();
 
   useEffect(() => {
     loadTodaysRoutes(vendedorId);
@@ -269,14 +277,31 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-4 pb-20">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
+      <div className="p-4 flex flex-col items-center justify-center h-[calc(100vh-100px)] text-center space-y-6">
+        <div className="relative">
+          <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-20 animate-pulse" />
+          <Loader2 className="w-16 h-16 text-green-600 animate-spin relative" />
         </div>
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
+        
+        <div className="space-y-4 max-w-[250px] w-full">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {loadingStep === 'rotas' ? 'Buscando rotas...' : 'Preparando entregas...'}
+          </h2>
+          
+          {loadingProgress && loadingProgress.total > 0 && (
+            <div className="space-y-2">
+              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-green-500 transition-all duration-300 ease-out"
+                  style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
+                />
+              </div>
+              <p className="text-sm text-gray-500 font-medium">
+                Sincronizando {loadingProgress.current} de {loadingProgress.total} rotas
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

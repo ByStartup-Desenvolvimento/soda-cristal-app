@@ -2,18 +2,27 @@ import { useState, useEffect } from 'react';
 import { Button } from '../../shared/ui/button';
 import { Card, CardContent, CardHeader } from '../../shared/ui/card';
 import { Badge } from '../../shared/ui/badge';
-import { ArrowLeft, Calendar, Package, DollarSign, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, CheckCircle, Loader2, AlertCircle, CreditCard, User } from 'lucide-react';
 import { vendasService } from '../../domain/vendas/services';
 import { useUserStore } from '../../domain/auth/userStore';
-import { Venda } from '../../domain/vendas/model';
+import { VendaVendedor } from '../../domain/vendas/model';
 
 interface CustomerHistoryProps {
   customer: any;
   onBack: () => void;
 }
 
+/** Converte "dd-MM-yyyy HH:mm:ss" para Date */
+function parseDataVenda(raw: string): Date {
+  // Ex: "12-03-2026 11:07:33"
+  const [datePart, timePart] = raw.split(' ');
+  if (!datePart) return new Date(0);
+  const [day, month, year] = datePart.split('-');
+  return new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}`);
+}
+
 export function CustomerHistory({ customer, onBack }: CustomerHistoryProps) {
-  const [history, setHistory] = useState<Venda[]>([]);
+  const [history, setHistory] = useState<VendaVendedor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const vendedorId = useUserStore(state => state.vendedorId);
 
@@ -22,16 +31,13 @@ export function CustomerHistory({ customer, onBack }: CustomerHistoryProps) {
       if (!vendedorId || !customer?.id) return;
 
       try {
-        // Busca todas as vendas do vendedor
-        // Idealmente, a API deveria ter um endpoint /vendas/cliente/{clienteId}
-        // Mas vamos usar o que temos e filtrar no front por enquanto
-        const vendas = await vendasService.getVendasVendedor(vendedorId);
+        const vendas = await vendasService.getVendasVendedorHistorico(vendedorId);
 
-        // Filtrar apenas deste cliente
+        // Filtra apenas as vendas deste cliente
         const vendasCliente = vendas.filter(v => v.cliente_id === customer.id);
 
-        // Ordenar por data (mais recente primeiro)
-        vendasCliente.sort((a, b) => new Date(b.data_venda).getTime() - new Date(a.data_venda).getTime());
+        // Ordena por data (mais recente primeiro)
+        vendasCliente.sort((a, b) => parseDataVenda(b.data_venda).getTime() - parseDataVenda(a.data_venda).getTime());
 
         setHistory(vendasCliente);
       } catch (error) {
@@ -43,31 +49,6 @@ export function CustomerHistory({ customer, onBack }: CustomerHistoryProps) {
 
     loadHistory();
   }, [vendedorId, customer]);
-
-  const getStatusBadge = (status?: string) => {
-    // Como a API de Venda não tem status explícito (assumimos concluída se existe),
-    // vamos considerar "delivered" por padrão para vendas recuperadas
-    // Se precisarmos de status real, o modelo de Venda precisa ser atualizado
-    return (
-      <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
-        <CheckCircle className="w-3 h-3" />
-        Concluída
-      </Badge>
-    );
-  };
-
-  const formatPaymentMethod = (venda: Venda) => {
-    if (!venda.contas_receber?.parcelas?.length) return 'N/A';
-    // Mapeamento simples de ID para nome (idealmente viria do backend ou store)
-    const methodId = venda.contas_receber.parcelas[0].meio_pagamento_id;
-    const methodMap: Record<number, string> = {
-      1: 'Dinheiro',
-      2: 'PIX',
-      3: 'Cartão',
-      4: 'Boleto/Transferência'
-    };
-    return methodMap[methodId] || `Método ${methodId}`;
-  };
 
   if (isLoading) {
     return (
@@ -101,45 +82,54 @@ export function CustomerHistory({ customer, onBack }: CustomerHistoryProps) {
             <p className="text-gray-500">Nenhuma venda encontrada para este cliente.</p>
           </div>
         ) : (
-          history.map((record) => (
-            <Card key={record.id} className="border-l-4 border-l-blue-500 shadow-sm">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <Calendar className="w-4 h-4" />
-                    <span>{new Date(record.data_venda).toLocaleDateString('pt-BR')} às {new Date(record.data_venda).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-                  {getStatusBadge()}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    {record.venda_item?.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-3 h-3 text-gray-400" />
-                          <span>{Math.floor(item.quantidade)}x Produto {item.produto_id}</span>
-                          {/* TODO: Buscar nome do produto se possível, ou cachear produtos */}
-                        </div>
-                        <span className="font-medium">R$ {(item.valor_unitario * item.quantidade).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
+          history.map((record) => {
+            const dataVenda = parseDataVenda(record.data_venda);
 
-                  <div className="pt-3 border-t flex justify-between items-center">
-                    <div className="text-sm text-muted-foreground">
-                      Pagamento: <span className="font-medium text-gray-700">{formatPaymentMethod(record)}</span>
+            return (
+              <Card key={record.venda_id} className="border-l-4 border-l-blue-500 shadow-sm">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <Calendar className="w-4 h-4" />
+                      <span>
+                        {dataVenda.toLocaleDateString('pt-BR')} às{' '}
+                        {dataVenda.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1 font-bold text-lg text-green-700">
-                      <DollarSign className="w-5 h-5" />
-                      {Number(record.contas_receber?.valor || 0).toFixed(2)}
+                    <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Concluída
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Vendedor */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <User className="w-3 h-3" />
+                      <span>Vendedor: <span className="font-medium text-gray-700">{record.vendedor_nome}</span></span>
+                    </div>
+
+                    {/* Meio de Pagamento */}
+                    {record.venda_meio_pag.trim() && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CreditCard className="w-3 h-3" />
+                        <span>Pagamento: <span className="font-medium text-gray-700">{record.venda_meio_pag.trim()}</span></span>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="pt-3 border-t flex justify-end items-center">
+                      <div className="flex items-center gap-1 font-bold text-lg text-green-700">
+                        <DollarSign className="w-5 h-5" />
+                        {Number(record.vlTotalVenda).toFixed(2)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
 
         {history.length > 0 && (
