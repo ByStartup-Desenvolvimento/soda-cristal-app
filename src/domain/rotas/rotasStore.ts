@@ -14,6 +14,8 @@ interface RotasState {
     error: string | null;
     lastFetchTodaysRoutes: number | null; // Data do último fetch (timestamp)
     lastFetchRotas: number | null;
+    loadingStep: 'rotas' | 'clientes' | null;
+    loadingProgress: { current: number; total: number } | null;
 
     // Ações
     loadRotas: (vendedorId: number, forceRefresh?: boolean) => Promise<void>;
@@ -36,6 +38,8 @@ export const useRotasStore = create<RotasState>((set, get) => ({
     error: null,
     lastFetchTodaysRoutes: null,
     lastFetchRotas: null,
+    loadingStep: null,
+    loadingProgress: null,
 
     // Carregar rotas do vendedor
     loadRotas: async (vendedorId: number, forceRefresh = false) => {
@@ -72,10 +76,12 @@ export const useRotasStore = create<RotasState>((set, get) => ({
             return;
         }
 
-        set({ isLoading: true, error: null, clientesRota: [] });
+        set({ isLoading: true, loadingStep: 'rotas', loadingProgress: null, error: null, clientesRota: [] });
         try {
             const todaysRoutes = await rotasService.getTodaysRoutes(vendedorId);
             set({ rotasDeHoje: todaysRoutes });
+
+            set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: todaysRoutes.length } });
 
             // Busca clientes usando batching para evitar rate limit (429)
             const BATCH_SIZE = 1;
@@ -89,6 +95,8 @@ export const useRotasStore = create<RotasState>((set, get) => ({
                 );
                 results.push(...batchResults);
                 
+                set({ loadingProgress: { current: Math.min(i + BATCH_SIZE, todaysRoutes.length), total: todaysRoutes.length } });
+                
                 if (i + BATCH_SIZE < todaysRoutes.length) {
                     await new Promise(resolve => setTimeout(resolve, DELAY_MS));
                 }
@@ -99,10 +107,16 @@ export const useRotasStore = create<RotasState>((set, get) => ({
                 .flat()
                 .sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
 
-            set({ clientesRota: allClientes, isLoading: false, lastFetchTodaysRoutes: Date.now() });
+            set({ 
+                clientesRota: allClientes, 
+                isLoading: false, 
+                loadingStep: null, 
+                loadingProgress: null, 
+                lastFetchTodaysRoutes: Date.now() 
+            });
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Erro ao carregar rotas do dia';
-            set({ error: message, isLoading: false });
+            set({ error: message, isLoading: false, loadingStep: null, loadingProgress: null });
         }
     },
 
@@ -116,7 +130,7 @@ export const useRotasStore = create<RotasState>((set, get) => ({
         const idsToLoad = rotaIds.filter(id => !existing[id]);
         if (idsToLoad.length === 0) return;
 
-        set({ isLoadingDeliveries: true });
+        set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: idsToLoad.length } });
 
         const BATCH_SIZE = 1; // Reduzido de 2 para 1 para garantir estabilidade
         const DELAY_MS = 300;
@@ -138,7 +152,10 @@ export const useRotasStore = create<RotasState>((set, get) => ({
                 }
 
                 // Atualiza incrementalmente para a UI ir aparecendo
-                set({ deliveriesPorRota: { ...accumulated } });
+                set({ 
+                    deliveriesPorRota: { ...accumulated },
+                    loadingProgress: { current: Math.min(i + BATCH_SIZE, idsToLoad.length), total: idsToLoad.length }
+                });
 
                 // Aguarda antes do próximo batch (exceto no último)
                 if (i + BATCH_SIZE < idsToLoad.length) {
@@ -146,10 +163,10 @@ export const useRotasStore = create<RotasState>((set, get) => ({
                 }
             }
 
-            set({ isLoadingDeliveries: false });
+            set({ isLoadingDeliveries: false, loadingStep: null, loadingProgress: null });
         } catch (error: unknown) {
             console.error('Erro ao carregar deliveries por rota:', error);
-            set({ deliveriesPorRota: { ...accumulated }, isLoadingDeliveries: false });
+            set({ deliveriesPorRota: { ...accumulated }, isLoadingDeliveries: false, loadingStep: null, loadingProgress: null });
         }
     },
 

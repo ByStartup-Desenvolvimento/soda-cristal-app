@@ -15,6 +15,8 @@ export function useRotas() {
         loadRotas,
         loadDeliveriesPorRotas,
         clearError,
+        loadingStep,
+        loadingProgress,
     } = useRotasStore();
 
     // Busca vendedorId do localStorage
@@ -43,6 +45,8 @@ export function useRotas() {
         deliveriesPorRota,
         reload: () => vendedorId ? loadRotas(vendedorId, true) : undefined,
         clearError,
+        loadingStep,
+        loadingProgress,
     };
 }
 
