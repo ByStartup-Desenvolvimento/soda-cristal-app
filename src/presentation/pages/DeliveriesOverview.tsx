@@ -74,8 +74,8 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId
       notes: item.cliente.observacao,
       latitude: item.cliente.latitude,
       longitude: item.cliente.longitude,
-      diasSemAtendimento: item.diassematendimento?.length || 0,
-      diasSemConsumo: item.diassemconsumo?.length || 0,
+      diasSemAtendimento: Number(item.diassematendimento) || 0,
+      diasSemConsumo: Number(item.diassemconsumo) || 0,
     };
   };
 

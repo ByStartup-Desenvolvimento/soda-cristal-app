@@ -34,6 +34,7 @@ interface RouteDetailsProps {
 export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpenPDV }: RouteDetailsProps) {
   const [_selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
   const { loadClientesRota, clientesRota, isLoading } = useRotasStore();
+  console.log(clientesRota);
 
   useEffect(() => {
     if (route && (!route.deliveries || route.deliveries.length === 0)) {
@@ -70,8 +71,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       notes: item.cliente.observacao,
       latitude: item.cliente.latitude,
       longitude: item.cliente.longitude,
-      diasSemAtendimento: item.diassematendimento?.length || 0,
-      diasSemConsumo: item.diassemconsumo?.length || 0,
+      diasSemAtendimento: Number(item.diassematendimento) || 0,
+      diasSemConsumo: Number(item.diassemconsumo) || 0,
     };
   };
 
@@ -146,6 +147,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
   // Uma entrega é "pendente" se não tiver checkInStatus registrado
   const pendingDeliveries = deliveries.filter(d => !deliveryStatuses[d.id]?.checkInStatus);
   const completedDeliveries = deliveries.filter(d => !!deliveryStatuses[d.id]?.checkInStatus);
+  console.log(deliveries);
 
   const openGPS = (delivery: Delivery) => {
     if (delivery.latitude && delivery.longitude) {
@@ -270,11 +272,11 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
                     <div className="flex flex-col space-y-1 items-end mt-1">
                       <div className="flex items-center space-x-1" title="Dias sem atendimento">
                         <UserX className="w-3 h-3 text-red-400" />
-                        <span className="text-xs text-muted-foreground">{delivery.diasSemAtendimento ?? 0} dias</span>
+                        <span className="text-xs text-muted-foreground">{delivery.diasSemAtendimento ?? 0} dias s/ atendimento</span>
                       </div>
                       <div className="flex items-center space-x-1" title="Dias sem consumo">
                         <ShoppingCart className="w-3 h-3 text-yellow-500" />
-                        <span className="text-xs text-muted-foreground">{delivery.diasSemConsumo ?? 0} dias</span>
+                        <span className="text-xs text-muted-foreground">{delivery.diasSemConsumo ?? 0} dias s/ consumo</span>
                       </div>
                     </div>
                   </div>

@@ -52,8 +52,8 @@ export interface RotaEntregaCompleta {
     rotaentrega: RotaEntrega;
     cliente: Cliente;
     rota: Rota;
-    diassematendimento: string[];
-    diassemconsumo: string[];
+    diassematendimento: number;
+    diassemconsumo: number;
 }
 
 // Estatísticas da rota (calculadas no front)

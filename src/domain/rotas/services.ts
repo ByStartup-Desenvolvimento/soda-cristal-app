@@ -91,7 +91,7 @@ export const rotasService = {
         clientes: RotaEntregaCompleta[],
         dia: string
     ): RotaEntregaCompleta[] {
-        return clientes.filter(c => c.diassematendimento.includes(dia));
+        return clientes.filter(c => String(c.diassematendimento).includes(dia));
     },
 
     /**

@@ -256,8 +256,8 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
                     <div className="divide-y">
                       {clientesFiltrados.map((item, index) => {
                         const { cliente, rotaentrega } = item;
-                        const diasSemAtendimento = item.diassematendimento?.length ?? 0;
-                        const diasSemConsumo = item.diassemconsumo?.length ?? 0;
+                        const diasSemAtendimento = Number(item.diassematendimento) || 0;
+                        const diasSemConsumo = Number(item.diassemconsumo) || 0;
 
                         return (
                           <div

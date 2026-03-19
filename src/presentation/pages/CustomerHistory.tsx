@@ -32,7 +32,6 @@ export function CustomerHistory({ customer, onBack }: CustomerHistoryProps) {
 
       try {
         const vendas = await vendasService.getVendasVendedorHistorico(vendedorId);
-
         // Filtra apenas as vendas deste cliente
         const vendasCliente = vendas.filter(v => v.cliente_id === customer.id);
 

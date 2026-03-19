@@ -42,6 +42,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { rotas, isLoading, isLoadingDeliveries, loadingProgress, error, reload, deliveriesPorRota } = useRotas();
   const { selectRota } = useRotasStore();
+  console.log(rotas);
 
   // Adapter para converter Rota do domínio para o formato UI
   const mappedRoutes: RouteUI[] = rotas.map(rota => {
@@ -110,7 +111,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
           <div className="absolute inset-0 bg-green-500 rounded-full blur-xl opacity-20 animate-pulse" />
           <Loader2 className="w-16 h-16 text-green-600 animate-spin relative" />
         </div>
-        
+
         <div className="space-y-4 max-w-[250px] w-full">
           <h2 className="text-xl font-semibold text-gray-900">
             Buscando rotas...
@@ -154,7 +155,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
               </p>
             </div>
             <div className="h-2 w-full bg-green-100 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-green-500 transition-all duration-300 ease-out"
                 style={{ width: `${(loadingProgress.current / loadingProgress.total) * 100}%` }}
               />
