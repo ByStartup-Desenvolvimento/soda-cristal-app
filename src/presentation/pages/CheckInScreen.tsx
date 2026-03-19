@@ -63,7 +63,14 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       const nowFormatted = formatApiDate(new Date());
 
       // Registro de presença (check-in inicial)
-      await checkInService.registrarPresenca(vendedorId, rotaEntregaId, nowFormatted, lat, lng);
+      await checkInService.registrarPresenca(
+        vendedorId,
+        rotaEntregaId,
+        delivery.clienteId,
+        nowFormatted,
+        Number(lat),
+        Number(lng)
+      );
 
       // Show status selection screen
       setShowStatusSelection(true);
@@ -78,7 +85,8 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
   const handleStatusSelection = (status: CheckInStatus) => {
     if (status === 'delivered' || status === 'no-sale') {
       setSelectedStatus(status);
-      setShowSaleDecision(true);
+      // setShowSaleDecision(true);
+      handleSaleDecision(true);
     } else {
       // For absent statuses, finish immediately without sale
       finishCheckIn(status, false);
@@ -104,12 +112,15 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
 
       await checkInService.realizarCheckIn({
         rota_entrega: rotaEntregaId,
+        cliente_id: delivery.clienteId,
         data_checkin: nowFormatted,
         vendedor: parseInt(vendedorIdStr),
         observacao: statusLabels[status] || status,
+        observacao_descart: "",
         dentro_raio: true,
-        latitude: lat,
-        longitude: lng,
+        latitude: Number(lat),
+        longitude: Number(lng),
+        anotacoes: "",
         quantidade_garrafas: delivery?.bottles?.quantity || 0,
         quantidade_vendida: status === 'delivered' ? (delivery?.bottles?.quantity || 1) : 0,
         teve_venda: hasSale

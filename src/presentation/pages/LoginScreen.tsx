@@ -37,7 +37,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       <Card className="w-full max-w-sm shadow-xl border-2" style={{ borderColor: 'rgba(0, 128, 0, 0.1)' }}>
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #008000 0%, #00a000 100%)' }}>
-            <img src="./logo_soda_cristal.png" alt="Logo Soda Cristal" />
+            <img src="../logo_soda_cristal.png" alt="Logo Soda Cristal" />
             {/* <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg> */}

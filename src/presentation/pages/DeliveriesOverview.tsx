@@ -58,6 +58,7 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId
   const mapClienteToDelivery = (item: RotaEntregaCompleta): Delivery => {
     return {
       id: item.rotaentrega.id.toString(), // ID único da entrega na rota
+      clienteId: item.cliente.id,
       orderId: `PED-${item.rotaentrega.id}`,
       orderCode: `SCT-${item.cliente.id}`,
       customerName: item.cliente.nome,

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Delivery, DeliveryStatusData } from './models';
 
 interface DeliveryState {
@@ -9,16 +10,25 @@ interface DeliveryState {
     setSelectedDelivery: (delivery: Delivery | null) => void;
     setSelectedRoute: (route: any | null) => void;
     updateDeliveryStatus: (id: string, status: DeliveryStatusData) => void;
+    clearDeliveryStatuses: () => void;
 }
 
-export const useDeliveryStore = create<DeliveryState>((set) => ({
-    selectedDelivery: null,
-    selectedRoute: null,
-    deliveryStatuses: {},
+export const useDeliveryStore = create<DeliveryState>()(
+    persist(
+        (set) => ({
+            selectedDelivery: null,
+            selectedRoute: null,
+            deliveryStatuses: {},
 
-    setSelectedDelivery: (delivery) => set({ selectedDelivery: delivery }),
-    setSelectedRoute: (route) => set({ selectedRoute: route }),
-    updateDeliveryStatus: (id, status) => set((state) => ({
-        deliveryStatuses: { ...state.deliveryStatuses, [id]: status }
-    })),
-}));
+            setSelectedDelivery: (delivery) => set({ selectedDelivery: delivery }),
+            setSelectedRoute: (route) => set({ selectedRoute: route }),
+            updateDeliveryStatus: (id, status) => set((state) => ({
+                deliveryStatuses: { ...state.deliveryStatuses, [id]: status }
+            })),
+            clearDeliveryStatuses: () => set({ deliveryStatuses: {} }),
+        }),
+        {
+            name: 'soda-delivery-storage',
+        }
+    )
+);

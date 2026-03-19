@@ -51,10 +51,10 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       default: return 'medium';
     }
   };
-
   const mapClienteToDelivery = (item: RotaEntregaCompleta): Delivery => {
     return {
       id: item.rotaentrega.id.toString(),
+      clienteId: item.cliente.id,
       orderId: `PED-${item.rotaentrega.id}`,
       orderCode: `SCT-${item.cliente.id}`,
       customerName: item.cliente.nome,

@@ -1,15 +1,26 @@
 
 export interface CheckInRequest {
     rota_entrega: number;
-    data_checkin: string; // dd/MM/yyyy HH:mm:ss
+    cliente_id: number;
+    data_checkin: string; // yyyy-MM-dd HH:mm:ss
     vendedor: number;
     observacao: string;
+    observacao_descart: string;
     dentro_raio: boolean;
-    latitude: string;
-    longitude: string;
+    latitude: number;
+    longitude: number;
+    anotacoes: string;
     quantidade_garrafas: number;
     quantidade_vendida: number;
     teve_venda: boolean; // Usado internamente para decidir se envia 1 ou 0
+    contas_receber?: {
+        valor: string;
+        parcelas: {
+            recebido: boolean;
+            valor: string;
+            meio_pagamento_id: number;
+        }[];
+    };
 }
 
 export interface SimpleCheckInRequest {
