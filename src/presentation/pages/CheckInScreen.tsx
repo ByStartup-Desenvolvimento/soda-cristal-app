@@ -1,22 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../shared/ui/card';
+import { Card, CardContent } from '../../shared/ui/card';
 import { Button } from '../../shared/ui/button';
-import { Badge } from '../../shared/ui/badge';
-import { ArrowLeft, MapPin, Clock, CheckCircle, Navigation, Wifi, AlertCircle, ShoppingCart, UserX } from 'lucide-react';
+import { ArrowLeft, MapPin, CheckCircle, Navigation, Wifi, AlertCircle, ShoppingCart, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { checkInService } from '../../domain/checkin/services';
 import { CheckInStatus } from '../../domain/deliveries/models';
 import { formatApiDate } from '../../shared/utils/formatters';
 
-interface CheckInRecord {
-  id: string;
-  timestamp: string;
-  location: string;
-  address: string;
-  customerName?: string;
-  status?: string;
-  hadSale?: boolean;
-}
+
 
 interface CheckInScreenProps {
   delivery?: any;
@@ -27,69 +18,32 @@ interface CheckInScreenProps {
 export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<string>('Aguardando localização...');
-  const [lastCheckIns, setLastCheckIns] = useState<CheckInRecord[]>([]);
   const [showStatusSelection, setShowStatusSelection] = useState(false);
   const [showSaleDecision, setShowSaleDecision] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<CheckInStatus | null>(null);
 
-  // Mock data dos últimos check-ins
   useEffect(() => {
-    setLastCheckIns([
-      {
-        id: 'checkin-005',
-        timestamp: '2024-01-24 14:30:22',
-        location: '-23.5505, -46.6333',
-        address: 'Rua do Comércio, 890 - Centro',
-        customerName: 'Roberto Lima',
-        status: 'delivered',
-        hadSale: true
-      },
-      {
-        id: 'checkin-004',
-        timestamp: '2024-01-24 13:45:15',
-        location: '-23.5489, -46.6388',
-        address: 'Rua da Paz, 321 - Centro',
-        customerName: 'Ana Costa',
-        status: 'no-sale',
-        hadSale: false
-      },
-      {
-        id: 'checkin-003',
-        timestamp: '2024-01-24 13:15:08',
-        location: '-23.5501, -46.6401',
-        address: 'Rua Nova, 789 - Centro',
-        customerName: 'Carlos Oliveira',
-        status: 'absent-return',
-        hadSale: false
-      },
-      {
-        id: 'checkin-002',
-        timestamp: '2024-01-24 12:30:45',
-        location: '-23.5495, -46.6350',
-        address: 'Av. Principal, 456 - Centro',
-        customerName: 'Maria Santos',
-        status: 'delivered',
-        hadSale: true
-      },
-      {
-        id: 'checkin-001',
-        timestamp: '2024-01-24 11:45:12',
-        location: '-23.5521, -46.6369',
-        address: 'Rua das Flores, 123 - Centro',
-        customerName: 'João Silva',
-        status: 'delivered',
-        hadSale: true
-      }
-    ]);
-
-    // Simulate getting current location
-    setTimeout(() => {
-      setCurrentLocation('-23.5505, -46.6333');
-    }, 2000);
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation(`${position.coords.latitude}, ${position.coords.longitude}`);
+        },
+        (error) => {
+          console.error('Erro ao obter localização:', error);
+          toast.error('Não foi possível obter sua localização. Verifique as permissões de GPS.');
+          setCurrentLocation('Localização indisponível');
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    } else {
+      toast.error('Geolocalização não suportada pelo seu dispositivo.');
+      setCurrentLocation('Localização não suportada');
+    }
   }, []);
 
   const handleCheckIn = async () => {
-    if (!delivery?.id) {
+    if (!delivery || delivery.id === undefined || delivery.id === null) {
+      console.error('CheckInScreen: delivery invalido', delivery);
       toast.error('Dados da entrega incompletos.');
       return;
     }
@@ -104,7 +58,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       }
 
       const vendedorId = parseInt(vendedorIdStr);
-      const rotaEntregaId = parseInt(delivery.id.replace('del-', ''));
+      const rotaEntregaId = parseInt(String(delivery.id).replace('del-', '')) || 0;
       const [lat, lng] = currentLocation.split(', ');
       const nowFormatted = formatApiDate(new Date());
 
@@ -138,7 +92,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       if (!vendedorIdStr) throw new Error('Vendedor não encontrado');
 
       const [lat, lng] = currentLocation.split(', ');
-      const rotaEntregaId = parseInt(delivery?.id.replace('del-', '') || '0');
+      const rotaEntregaId = parseInt(String(delivery?.id || '0').replace('del-', '')) || 0;
       const nowFormatted = formatApiDate(new Date());
 
       const statusLabels: Record<string, string> = {
@@ -162,17 +116,6 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       });
 
       const now = new Date();
-      const newCheckIn: CheckInRecord = {
-        id: `checkin-${Date.now()}`,
-        timestamp: now.toLocaleString('pt-BR'),
-        location: currentLocation,
-        address: delivery?.address || 'Localização atual',
-        customerName: delivery?.customerName,
-        status: status,
-        hadSale: hasSale
-      };
-
-      setLastCheckIns(prev => [newCheckIn, ...prev.slice(0, 4)]);
 
       const statusMessages = {
         'delivered': 'Entrega realizada com sucesso!',
@@ -206,28 +149,22 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
     finishCheckIn(selectedStatus, hasSale);
   };
 
-  const getStatusInfo = (status?: string) => {
-    switch (status) {
-      case 'delivered':
-        return { color: 'bg-green-100 text-green-800 border-green-300', label: 'Entregue', icon: CheckCircle };
-      case 'no-sale':
-        return { color: 'bg-gray-100 text-gray-800 border-gray-300', label: 'Não quis consumir', icon: UserX };
-      case 'absent-return':
-        return { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'Ausente - Retornar', icon: AlertCircle };
-      case 'absent-no-return':
-        return { color: 'bg-red-100 text-red-800 border-red-300', label: 'Ausente - Não retornar', icon: UserX };
-      default:
-        return { color: 'bg-blue-100 text-blue-800 border-blue-300', label: 'Check-in', icon: CheckCircle };
-    }
-  };
+  // const getStatusInfo = (status?: string) => {
+  //   switch (status) {
+  //     case 'delivered':
+  //       return { color: 'bg-green-100 text-green-800 border-green-300', label: 'Entregue', icon: CheckCircle };
+  //     case 'no-sale':
+  //       return { color: 'bg-gray-100 text-gray-800 border-gray-300', label: 'Não quis consumir', icon: UserX };
+  //     case 'absent-return':
+  //       return { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'Ausente - Retornar', icon: AlertCircle };
+  //     case 'absent-no-return':
+  //       return { color: 'bg-red-100 text-red-800 border-red-300', label: 'Ausente - Não retornar', icon: UserX };
+  //     default:
+  //       return { color: 'bg-blue-100 text-blue-800 border-blue-300', label: 'Check-in', icon: CheckCircle };
+  //   }
+  // };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp.replace(' ', 'T'));
-    return {
-      date: date.toLocaleDateString('pt-BR'),
-      time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    };
-  };
+
 
   if (showSaleDecision) {
     return (
@@ -438,7 +375,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
               <div className="p-4 border-t bg-white rounded-b-lg">
                 <Button
                   onClick={handleCheckIn}
-                  disabled={isLoading || currentLocation === 'Aguardando localização...'}
+                  disabled={isLoading || currentLocation === 'Aguardando localização...' || !delivery}
                   className="w-full h-14 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-md text-lg font-semibold"
                 >
                   {isLoading ? (
@@ -458,73 +395,6 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
           </Card>
         </div>
 
-        {/* Check-in History */}
-        <div className="p-4 pb-20 bg-gray-50">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center">
-                <Clock className="w-4 h-4 mr-2" />
-                Últimos Check-ins
-              </CardTitle>
-              <CardDescription>
-                Histórico dos últimos 5 check-ins realizados
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {lastCheckIns.length === 0 ? (
-                <div className="text-center py-4">
-                  <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum check-in realizado ainda
-                  </p>
-                </div>
-              ) : (
-                lastCheckIns.map((checkIn, index) => {
-                  const { date, time } = formatTimestamp(checkIn.timestamp);
-                  const statusInfo = getStatusInfo(checkIn.status);
-                  const StatusIcon = statusInfo.icon;
-
-                  return (
-                    <div
-                      key={checkIn.id}
-                      className={`flex items-start space-x-3 p-3 rounded-lg border-2 ${statusInfo.color} transition-all`}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index === 0 ? 'ring-2 ring-offset-2 ring-green-400' : ''
-                        }`}>
-                        <StatusIcon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm">
-                              {checkIn.customerName || 'Check-in Geral'}
-                            </p>
-                            {checkIn.hadSale && (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-300">
-                                💰 Venda
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">{date}</p>
-                            <p className="text-xs font-medium">{time}</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className={`text-xs ${statusInfo.color} border-0`}>
-                          {statusInfo.label}
-                        </Badge>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="w-3 h-3 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">{checkIn.address}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
