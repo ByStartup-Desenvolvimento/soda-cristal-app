@@ -21,6 +21,7 @@ export interface Cliente {
     complemento?: string;
     bairro: string;
     cep: string;
+    email?: string;
     observacao?: string;
     ativo: number;
     // Coordenadas para GPS

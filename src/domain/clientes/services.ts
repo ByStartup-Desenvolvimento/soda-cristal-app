@@ -64,5 +64,29 @@ export const clientesServices = {
         };
 
         return await clientesService.cadastrarCliente(apiPayload);
+    },
+
+    async alterarCliente(payload: ClienteCadastroPayload) {
+        const apiPayload: CadastroContratosPayload = {
+            contratos: {
+                novosContratos: [],
+                alteracaoContrato: [{ ...payload, tipo_cadastro: 2 }],
+                inativacoes: []
+            }
+        };
+
+        return await clientesService.cadastrarCliente(apiPayload);
+    },
+
+    async inativarCliente(payload: ClienteCadastroPayload) {
+        const apiPayload: CadastroContratosPayload = {
+            contratos: {
+                novosContratos: [],
+                alteracaoContrato: [],
+                inativacoes: [{ ...payload, tipo_cadastro: 2 }] // Reutilizando a mesma lógica do original, a API deve diferenciar pelo array inativacoes
+            }
+        };
+
+        return await clientesService.cadastrarCliente(apiPayload);
     }
 }   
