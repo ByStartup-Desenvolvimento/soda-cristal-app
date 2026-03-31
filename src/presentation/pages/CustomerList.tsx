@@ -50,16 +50,20 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
     );
   };
 
+  const getActiveClientes = (rotaId: number) => {
+    return (deliveriesPorRota[rotaId] || []).filter(c => c.cliente.ativo === 1);
+  };
+
   const filteredRoutes = rotas.filter((rota: Rota) => {
     if (!searchTerm) return true;
     // Mostra a rota se o nome bate OU se contém clientes que batem
     if (matchesSearch(rota.nome) || matchesSearch(rota.frequencia)) return true;
-    const clientes = deliveriesPorRota[rota.id] || [];
+    const clientes = getActiveClientes(rota.id);
     return clientes.some(clienteMatchesSearch);
   });
 
   const getFilteredClientes = (rotaId: number): RotaEntregaCompleta[] => {
-    const clientes = deliveriesPorRota[rotaId] || [];
+    const clientes = getActiveClientes(rotaId);
     if (!searchTerm) return clientes;
     // Se o nome da rota já bate, mostra todos os clientes
     const rota = rotas.find(r => r.id === rotaId);
@@ -71,7 +75,7 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
   };
 
   const totalClientes = filteredRoutes.reduce((sum, rota) => {
-    return sum + (deliveriesPorRota[rota.id]?.length || 0);
+    return sum + getActiveClientes(rota.id).length;
   }, 0);
 
   const toggleRoute = (rotaId: number) => {
@@ -187,7 +191,7 @@ export function CustomerList({ onAddCustomer, onViewContracts: _onViewContracts,
       <div className="space-y-3">
         {filteredRoutes.map((rota) => {
           const isExpanded = expandedRouteId === rota.id;
-          const clientes = deliveriesPorRota[rota.id] || [];
+          const clientes = getActiveClientes(rota.id);
           const clientesFiltrados = getFilteredClientes(rota.id);
           const clienteCount = clientes.length;
 
