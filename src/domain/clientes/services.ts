@@ -24,7 +24,7 @@ export const clientesServices = {
 
         // Mapeia e injeta os dados MOCKADOS ou CALCULADOS para a UI
         return clientes
-            .filter((cliente: Clientes) => cliente.ativo === 1 || cliente.ativo === 0)
+            .filter((cliente: Clientes) => cliente.ativo === 1)
             .map(cliente => {
                 // Lógica de Data de Entrega
                 let ultimaEntrega = cliente.ultima_entrega;
@@ -77,7 +77,7 @@ export const clientesServices = {
     async inativarCliente(payload: ClienteCadastroPayload) {
         const apiPayload: CadastroContratosPayload = {
             contratos: {
-                inativacoes: [payload] 
+                inativacoes: [payload]
             }
         };
 
