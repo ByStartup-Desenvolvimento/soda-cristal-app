@@ -79,7 +79,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       customerName: 'João Silva',
       customerPhone: '(11) 99999-1234',
       address: 'Rua das Flores, 123 - Centro',
-      bottles: { quantity: 3, size: '20L' },
+      bottles: { quantity: 3, size: '1,5 L' },
       status: 'pending',
       priority: 'high',
       estimatedTime: '09:00',
@@ -93,7 +93,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       customerName: 'Maria Santos',
       customerPhone: '(11) 99999-5678',
       address: 'Av. Principal, 456 - Centro',
-      bottles: { quantity: 2, size: '20L' },
+      bottles: { quantity: 2, size: '1,5 L' },
       status: 'pending',
       priority: 'medium',
       estimatedTime: '09:30',
@@ -119,7 +119,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       customerName: 'Ana Costa',
       customerPhone: '(11) 99999-3456',
       address: 'Rua da Paz, 321 - Centro',
-      bottles: { quantity: 4, size: '20L' },
+      bottles: { quantity: 4, size: '1,5 L' },
       status: 'pending',
       priority: 'high',
       estimatedTime: '10:30',
@@ -133,7 +133,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       customerName: 'Roberto Lima',
       customerPhone: '(11) 99999-7890',
       address: 'Rua do Comércio, 890 - Centro',
-      bottles: { quantity: 6, size: '20L' },
+      bottles: { quantity: 6, size: '1,5 L' },
       status: 'pending',
       priority: 'medium',
       estimatedTime: '11:00',
@@ -262,7 +262,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
                   </span>
                 </div>
 
-                {delivery.notes && (
+                {(delivery.notes && delivery.notes !== 'null' && delivery.notes.trim() !== '') && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
                     <p className="text-sm text-yellow-800">
                       <strong>Observação:</strong> {delivery.notes}

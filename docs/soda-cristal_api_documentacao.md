@@ -138,54 +138,172 @@ Todos os endpoints abaixo são **GET** e requerem os headers padrão.
 
 ## 📝 4. Transações e Lançamentos (POST)
 
-### 4.1. Cadastro de Cliente (v2)
+### 4.1. Cadastro / Alteração / Inativação de Cliente (v2)
+
+> **⚠️ COMPORTAMENTO CRÍTICO:** O endpoint é único para as três operações (novo, edição, inativação). A diferença está em qual chave dentro de `contratos` recebe o objeto e no valor de `tipo_cadastro`. **Arrays vazios (`[]`) NÃO devem ser enviados** — envie apenas a chave correspondente à operação desejada.
+
 - **Endpoint:** `POST /contratos/v2/cadastro-de-clientes`
 - **URL Completa:** `https://app.sodacristal.com.br/api/contratos/v2/cadastro-de-clientes`
-- **Payload Estruturado:**
+
+---
+
+#### 4.1.1. Novo Cadastro (`tipo_cadastro: 1`)
+
+Envia apenas a chave `novosContratos`. Omite `alteracaoContrato` e `inativacoes` por completo.
+
 ```json
 {
   "contratos": {
     "novosContratos": [
       {
-        "id": 1,
+        "id": 0,
         "cliente_id_api": 0,
         "nome": "Nome do Cliente",
         "cpf_cnpj": "000.000.000-00",
-        "rg": "12.345.678-9",
-        "data_nascimento": "1990-01-01",
+        "rg": "",
+        "data_nascimento": "",
         "telefone": "11999999999",
-        "telefone2": "11888888888",
+        "telefone2": "",
         "cep": "00000-000",
         "endereco": "Rua Exemplo",
         "bairro": "Centro",
         "numero": "123",
-        "complemento": "Apto 45",
-        "qtd_garrafa": 10,
-        "qtd_garrafa_comprada": 5,
+        "complemento": "",
+        "qtd_garrafa": 2,
+        "qtd_garrafa_comprada": 0,
         "dia_reposicao": "Segunda",
         "obs": "Observações do cliente",
+        "rota": "Rota Centro",
         "vendedor": 1,
         "tipo_cadastro": 1,
         "revendedor_xarope": false,
         "revendedor_agua": false,
-        "cf_xarope": true,
+        "cf_xarope": false,
         "cf_agua": true,
         "precoespecial_agua": false,
         "precoespecial_xarope": false,
-        "data_inativacao": "",
-        "rota": "Rota Centro"
+        "data_inativacao": ""
       }
-    ],
-    "alteracaoContrato": [],
-    "inativacoes": []
+    ]
   }
 }
 ```
-- **Notas:**
-  - `tipo_cadastro`: 1 = Novo, 2 = Alteração, 3 = Inativação
-  - `cliente_id_api`: 0 para novos, ou ID existente para alterações
-  - `data_nascimento`: Formato `yyyy-MM-dd`
-  - Campos `alteracaoContrato` e `inativacoes` seguem a mesma estrutura, mas com `tipo_cadastro` diferente
+
+**Regras:**
+- `id`: Sempre `0` para novos cadastros
+- `cliente_id_api`: Sempre `0` para novos cadastros
+- `rg` e `data_nascimento`: São **opcionais** — enviar string vazia `""` quando não informados
+- `dia_reposicao`: Valores aceitos: `"Segunda"`, `"Terca"`, `"Quarta"`, `"Quinta"`, `"Sexta"`, `"Sabado"`, `"Domingo"`, `"Não definido"` ou `""`
+- `rota`: O **nome** da rota (string), não o ID numérico — ex: `"Rota Centro"`
+- `qtd_garrafa`: Garrafas consignadas. Aceita `0` como valor válido
+- `qtd_garrafa_comprada`: Garrafas compradas. Aceita `0` como valor válido
+- `data_inativacao`: Enviar string vazia `""` para novos cadastros
+
+---
+
+#### 4.1.2. Alteração de Cadastro (`tipo_cadastro: 2`)
+
+Envia apenas a chave `alteracaoContrato`. Omite `novosContratos` e `inativacoes` por completo.
+
+```json
+{
+  "contratos": {
+    "alteracaoContrato": [
+      {
+        "id": 0,
+        "cliente_id_api": 456,
+        "nome": "Nome do Cliente Atualizado",
+        "cpf_cnpj": "000.000.000-00",
+        "rg": "",
+        "data_nascimento": "",
+        "telefone": "11999999999",
+        "telefone2": "",
+        "cep": "00000-000",
+        "endereco": "Rua Nova",
+        "bairro": "Bairro Novo",
+        "numero": "456",
+        "complemento": "",
+        "qtd_garrafa": 3,
+        "qtd_garrafa_comprada": 1,
+        "dia_reposicao": "",
+        "obs": "Observação atualizada",
+        "rota": "Rota Centro",
+        "vendedor": 1,
+        "tipo_cadastro": 2,
+        "revendedor_xarope": false,
+        "revendedor_agua": false,
+        "cf_xarope": false,
+        "cf_agua": true,
+        "precoespecial_agua": false,
+        "precoespecial_xarope": false,
+        "data_inativacao": ""
+      }
+    ]
+  }
+}
+```
+
+**Regras:**
+- `cliente_id_api`: Deve conter o **ID real do cliente** retornado pela API (campo `id` do objeto `cliente` em `/rotas-entregas`)
+- `tipo_cadastro`: Sempre `2` para alteração
+- Todos os demais campos seguem as mesmas regras do novo cadastro
+- `data_inativacao`: Enviar string vazia `""` para alterações
+
+---
+
+#### 4.1.3. Inativação de Cadastro (`tipo_cadastro: 3`)
+
+Envia apenas a chave `inativacoes`. Omite `novosContratos` e `alteracaoContrato` por completo.
+
+```json
+{
+  "contratos": {
+    "inativacoes": [
+      {
+        "id": 456,
+        "cliente_id_api": 456,
+        "nome": "Nome do Cliente",
+        "cpf_cnpj": "000.000.000-00",
+        "rg": "",
+        "data_nascimento": "",
+        "telefone": "11999999999",
+        "telefone2": "",
+        "cep": "00000-000",
+        "endereco": "Rua do Cliente",
+        "bairro": "Bairro do Cliente",
+        "numero": "123",
+        "complemento": "",
+        "qtd_garrafa": 2,
+        "qtd_garrafa_comprada": 0,
+        "dia_reposicao": "",
+        "obs": "Motivo da inativação: cliente solicitou encerramento",
+        "rota": "Rota Centro",
+        "vendedor": 1,
+        "tipo_cadastro": 3,
+        "revendedor_xarope": false,
+        "revendedor_agua": false,
+        "cf_xarope": false,
+        "cf_agua": true,
+        "precoespecial_agua": false,
+        "precoespecial_xarope": false,
+        "data_inativacao": "01/04/2026 10:30:00"
+      }
+    ]
+  }
+}
+```
+
+**Regras:**
+- `id`: Deve conter o ID real do cliente (não zero)
+- `cliente_id_api`: Mesmo valor que `id` — ID real do cliente
+- `tipo_cadastro`: Sempre `3` para inativação
+- `data_inativacao`: **OBRIGATÓRIO** e no formato exato `dd/MM/yyyy HH:mm:ss` (ex: `"01/04/2026 10:30:00"`)
+  - ⚠️ Formatos ISO (`2026-04-01T10:30:00`) ou com separador `T` **causarão erro 500 no servidor**
+  - O campo deve ser preenchido automaticamente com a data/hora atual no momento da ação
+- `obs`: Usado para registrar o **motivo da inativação**
+- `qtd_garrafa`: Quantidade de vasilhames a devolver na recolha
+
+---
 
 ### 4.2. Enviar Venda de Xarope (v2)
 - **Endpoint:** `POST /vendaxarope/v2`
@@ -385,25 +503,27 @@ Configure na sua Collection do Postman:
 ## 📚 Estrutura de Dados Detalhada
 
 ### Objeto ClienteCadastro (Campos Completos)
+
 ```json
 {
-  "id": 1,
+  "id": 0,
   "cliente_id_api": 0,
   "nome": "string",
   "cpf_cnpj": "string",
-  "rg": "string",
-  "data_nascimento": "yyyy-MM-dd",
+  "rg": "",
+  "data_nascimento": "",
   "telefone": "string",
-  "telefone2": "string",
+  "telefone2": "",
   "cep": "string",
   "endereco": "string",
   "bairro": "string",
   "numero": "string",
-  "complemento": "string",
+  "complemento": "",
   "qtd_garrafa": 0,
   "qtd_garrafa_comprada": 0,
-  "dia_reposicao": "string",
+  "dia_reposicao": "",
   "obs": "string",
+  "rota": "string",
   "vendedor": 0,
   "tipo_cadastro": 1,
   "revendedor_xarope": false,
@@ -412,10 +532,41 @@ Configure na sua Collection do Postman:
   "cf_agua": false,
   "precoespecial_agua": false,
   "precoespecial_xarope": false,
-  "data_inativacao": "string",
-  "rota": "string"
+  "data_inativacao": ""
 }
 ```
+
+#### Tabela de Regras por Campo
+
+| Campo | Tipo | Obrigatório | Notas |
+| :--- | :--- | :--- | :--- |
+| `id` | `number` | Sim | `0` para novos; ID real do cliente para inativação |
+| `cliente_id_api` | `number` | Sim | `0` para novos; ID real do cliente para alteração/inativação |
+| `nome` | `string` | Sim | — |
+| `cpf_cnpj` | `string` | Sim | Pode vir formatado (ex: `000.000.000-00`) |
+| `rg` | `string` | Não | Enviar `""` se não informado |
+| `data_nascimento` | `string` | Não | Enviar `""` se não informado |
+| `telefone` | `string` | Sim | Pode vir formatado (ex: `(11) 99999-9999`) |
+| `telefone2` | `string` | Não | Enviar `""` se não informado |
+| `cep` | `string` | Sim | — |
+| `endereco` | `string` | Sim | Nome do logradouro |
+| `bairro` | `string` | Sim | — |
+| `numero` | `string` | Sim | — |
+| `complemento` | `string` | Não | Enviar `""` se não informado |
+| `qtd_garrafa` | `number` | Sim | Garrafas consignadas. Aceita `0` |
+| `qtd_garrafa_comprada` | `number` | Sim | Garrafas compradas. Aceita `0` |
+| `dia_reposicao` | `string` | Não | Valores: `"Segunda"`, `"Terca"`, `"Quarta"`, `"Quinta"`, `"Sexta"`, `"Sabado"`, `"Domingo"`, `"Não definido"` ou `""` |
+| `obs` | `string` | Não | Na inativação, usado para o **motivo** |
+| `rota` | `string` | Sim | **Nome** da rota (não o ID numérico) |
+| `vendedor` | `number` | Sim | ID do vendedor logado |
+| `tipo_cadastro` | `number` | Sim | `1` = Novo, `2` = Alteração, `3` = Inativação |
+| `revendedor_xarope` | `boolean` | Sim | — |
+| `revendedor_agua` | `boolean` | Sim | — |
+| `cf_xarope` | `boolean` | Sim | Consumidor Final Xarope |
+| `cf_agua` | `boolean` | Sim | Consumidor Final Água |
+| `precoespecial_agua` | `boolean` | Sim | — |
+| `precoespecial_xarope` | `boolean` | Sim | — |
+| `data_inativacao` | `string` | Condicional | **Obrigatório** na inativação. Formato: `dd/MM/yyyy HH:mm:ss`. Enviar `""` nos demais casos |
 
 ### Objeto Venda (Campos Completos)
 ```json
@@ -479,13 +630,75 @@ Configure na sua Collection do Postman:
 
 ---
 
+## ⚠️ Pontos de Atenção e Comportamentos Críticos da API
+
+### 1. Envio de Arrays Vazios Causa Erro 500
+
+O endpoint `/contratos/v2/cadastro-de-clientes` **não tolera** a presença de chaves com arrays vazios (`[]`) no payload. Enviar `"alteracaoContrato": []` ou `"inativacoes": []` junto com `novosContratos` resulta em **erro 500**.
+
+> **Regra:** Inclua **apenas** a chave correspondente à operação desejada. Omita completamente as demais.
+
+| Operação | Chave a enviar | Chaves a omitir |
+| :--- | :--- | :--- |
+| Novo Cadastro | `novosContratos` | `alteracaoContrato`, `inativacoes` |
+| Alteração | `alteracaoContrato` | `novosContratos`, `inativacoes` |
+| Inativação | `inativacoes` | `novosContratos`, `alteracaoContrato` |
+
+---
+
+### 2. Formato de `data_inativacao` é Crítico
+
+O campo `data_inativacao` **deve** estar no formato `dd/MM/yyyy HH:mm:ss`. Qualquer outro formato (ISO 8601, com `T`, sem segundos) causa **erro 500** no servidor.
+
+```
+✅ Correto:  "01/04/2026 10:30:00"
+❌ Errado:   "2026-04-01T10:30:00"
+❌ Errado:   "2026-04-01 10:30:00"
+❌ Errado:   "01/04/2026 10:30"
+```
+
+---
+
+### 3. Campo `rota` Recebe o Nome, Não o ID
+
+Ao contrário do que pode parecer, o campo `rota` no payload de cadastro recebe o **nome textual** da rota (ex: `"Rota Centro"`), não o ID numérico do campo `id` retornado pelo endpoint `/rotas/{vendedor_id}`.
+
+---
+
+### 4. Campos Opcionais Devem Ter String Vazia
+
+Campos opcionais como `rg`, `data_nascimento`, `telefone2` e `complemento` devem ser enviados como string vazia `""` quando não preenchidos. Evite enviar `null` ou omitir o campo, pois o comportamento do servidor pode ser imprevisível.
+
+---
+
+### 5. `qtd_garrafa` Aceita Zero como Valor Válido
+
+O campo `qtd_garrafa` (garrafas consignadas) aceita `0` como valor válido. Não há validação mínima de `1` por parte do servidor. O mesmo se aplica a `qtd_garrafa_comprada`.
+
+---
+
+### 6. `cliente_id_api` vs `id` na Inativação
+
+Na operação de inativação, tanto `id` quanto `cliente_id_api` devem receber o **ID real do cliente** (retornado pelo endpoint `/rotas-entregas`). Para novos cadastros, ambos devem ser `0`.
+
+---
+
 ## 🔍 Referências no Código
 
+### Código Android (Referência Original)
 - **Arquivo de Endpoints:** `app/src/main/java/dev/stager/com/br/sodacristal2/utilitarios/Endpoint.java`
 - **Tasks de Requisição:** `app/src/main/java/dev/stager/com/br/sodacristal2/tasks/`
 - **Modelos de Dados:** `app/src/main/java/dev/stager/com/br/sodacristal2/models/`
 
+### Código Web (soda-app — Implementação Atual)
+- **Modelos e Schema de Validação:** `src/domain/clientes/model.ts` — Interface `ClienteCadastroPayload` e `CadastroContratosPayload`
+- **Serviços de Domínio:** `src/domain/clientes/services.ts` — Funções `cadastrarCliente`, `alterarCliente`, `inativarCliente`
+- **HTTP Client:** `src/shared/api/services/clientesServices.ts`
+- **Tela de Cadastro:** `src/presentation/pages/CustomerRegistration.tsx`
+- **Sheet de Edição:** `src/presentation/components/ClienteEditSheet.tsx`
+- **Sheet de Inativação:** `src/presentation/components/ClienteDesativarSheet.tsx`
+
 ---
 
-**Documento gerado em:** 21/01/2026  
-**Baseado na análise do código-fonte do projeto Soda Cristal Android**
+**Documento atualizado em:** 01/04/2026  
+**Baseado na análise do código-fonte Android e na implementação atual do projeto web (soda-app)**

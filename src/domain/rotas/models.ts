@@ -21,6 +21,7 @@ export interface Cliente {
     complemento?: string;
     bairro: string;
     cep: string;
+    email?: string;
     observacao?: string;
     ativo: number;
     // Coordenadas para GPS
@@ -52,8 +53,8 @@ export interface RotaEntregaCompleta {
     rotaentrega: RotaEntrega;
     cliente: Cliente;
     rota: Rota;
-    diassematendimento: string[];
-    diassemconsumo: string[];
+    diassematendimento: number;
+    diassemconsumo: number;
 }
 
 // Estatísticas da rota (calculadas no front)

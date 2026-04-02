@@ -27,9 +27,27 @@ interface PDVStandaloneProps {
   onBack?: () => void;
 }
 
+// Produtos virtuais de garrafa (preços fixos — futuramente vindos de API)
+const BOTTLE_PRODUCTS: Produto[] = [
+  {
+    id: -1,
+    descricao: 'Garrafa Reposição',
+    valor_unitario: '9.99',
+    ativo: 1,
+    categoria: 'Garrafas',
+  },
+  {
+    id: -2,
+    descricao: 'Garrafa Vendida',
+    valor_unitario: '28.00',
+    ativo: 1,
+    categoria: 'Garrafas',
+  },
+];
+
 export function PDVStandalone({ delivery, customerName: propCustomerName, onBack }: PDVStandaloneProps = {}) {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Garrafas');
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [customerName, setCustomerName] = useState(propCustomerName || delivery?.customerName || '');
@@ -54,7 +72,7 @@ export function PDVStandalone({ delivery, customerName: propCustomerName, onBack
         //TODO: remover quando tiver o vendedorId apos entender como usa a URL de produtos
         let distribuidorIdNormalized = Number(distribuidorId + "0")
         const produtosData = await produtosService.getProdutos(distribuidorIdNormalized);
-        console.log(distribuidorIdNormalized);
+        console.log("ID DISTRIBUIDOR:" + distribuidorIdNormalized);
         console.log(produtosData);
 
 
@@ -205,13 +223,16 @@ export function PDVStandalone({ delivery, customerName: propCustomerName, onBack
     }
   };
 
-  // Extract categories dynamically from loaded products
-  // Se a API não retornar categoria, podemos inferir ou usar 'Geral'
-  const categories = ['all', ...new Set(produtos.map(p => p.categoria || 'Geral').filter(Boolean))];
+  // Tabs fixas: Garrafas (produtos virtuais) + Soda (produtos da API)
+  const categories = ['Garrafas', 'Soda'];
 
-  const filteredProducts = produtos.filter(product => {
-    const category = product.categoria || 'Geral';
-    const matchesCategory = selectedCategory === 'all' || category === selectedCategory;
+  // Combina produtos virtuais de garrafa + produtos da API
+  const allProducts = [...BOTTLE_PRODUCTS, ...produtos];
+
+  const filteredProducts = allProducts.filter(product => {
+    // Garrafas → categoria 'Garrafas'; Produtos da API → 'Soda'
+    const productCategory = product.id < 0 ? 'Garrafas' : 'Soda';
+    const matchesCategory = productCategory === selectedCategory;
     const matchesSearch = product.descricao.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -324,14 +345,14 @@ export function PDVStandalone({ delivery, customerName: propCustomerName, onBack
               onClick={() => setSelectedCategory(category)}
               className="whitespace-nowrap"
             >
-              {category === 'all' ? 'Todos' : category}
+              {category}
             </Button>
           ))}
         </div>
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-3 mb-40">
         {filteredProducts.map((product) => {
           const quantityInCart = getCartItemQuantity(product.id);
           const price = getProductPrice(product);
@@ -401,7 +422,7 @@ export function PDVStandalone({ delivery, customerName: propCustomerName, onBack
 
       {/* Cart Summary - Fixed Bottom */}
       {cart.length > 0 && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-border p-4 shadow-lg">
+        <div className="sticky bottom-16 left-0 right-0 bg-white border-t border-border p-4 shadow-lg">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">

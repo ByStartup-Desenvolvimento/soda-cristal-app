@@ -3,6 +3,7 @@ export type CheckInStatus = 'delivered' | 'no-sale' | 'absent-return' | 'absent-
 
 export interface Delivery {
     id: string;
+    clienteId: number;
     orderId: string;
     orderCode: string;
     customerName: string;
@@ -20,6 +21,8 @@ export interface Delivery {
     notes?: string;
     latitude?: string;
     longitude?: string;
+    diasSemAtendimento?: number;
+    diasSemConsumo?: number;
 }
 
 export interface DeliveryStatusData {

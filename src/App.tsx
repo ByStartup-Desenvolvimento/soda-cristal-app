@@ -56,16 +56,8 @@ export default function App() {
               <DeliveriesOverview
                 deliveryStatuses={deliveryStatuses}
                 vendedorId={vendedorId!}
-                onSelectDelivery={(delivery, routeDeliveries) => {
-                  setSelectedDelivery(delivery);
-                  setSelectedRoute({
-                    id: `route-${delivery.routeName}`,
-                    name: delivery.routeName || "Rota",
-                    zone:
-                      delivery.address.split(" - ")[1] ||
-                      "Zona não especificada",
-                    deliveries: routeDeliveries, // Todos os clientes da mesma rota
-                  });
+                onSelectRoute={(route) => {
+                  setSelectedRoute(route);
                   navigate("/routes/details");
                 }}
               />

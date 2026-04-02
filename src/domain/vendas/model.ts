@@ -9,6 +9,23 @@ export interface Venda {
     // Adicione outros campos conforme a API
 }
 
+/** Estrutura retornada pelo endpoint /vendas_vendedor/{vendedorId} */
+export interface VendaVendedor {
+    cliente_nome: string;
+    cliente_id: number;
+    cliente_codigo: string;
+    cliente_rua: string;
+    cliente_numero: string;
+    cliente_bairro: string;
+    cliente_celular: string;
+    cliente_celular2: string;
+    venda_id: number;
+    vendedor_nome: string;
+    venda_meio_pag: string;
+    vlTotalVenda: string;
+    data_venda: string; // "dd-MM-yyyy HH:mm:ss"
+}
+
 export interface VendaItem {
     id: number;
     produto_id: number;

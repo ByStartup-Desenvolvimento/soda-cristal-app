@@ -1,10 +1,15 @@
 import api from '../../shared/api';
 import { ENDPOINTS } from '../../shared/api/endpoints';
-import { Venda } from './model';
+import { Venda, VendaVendedor } from './model';
 
 export const vendasService = {
     getVendasVendedor: async (vendedorId: number): Promise<Venda[]> => {
         const response = await api.get<Venda[]>(ENDPOINTS.vendasVendedor(vendedorId));
+        return response.data;
+    },
+
+    getVendasVendedorHistorico: async (vendedorId: number): Promise<VendaVendedor[]> => {
+        const response = await api.get<VendaVendedor[]>(ENDPOINTS.vendasVendedor(vendedorId));
         return response.data;
     },
 

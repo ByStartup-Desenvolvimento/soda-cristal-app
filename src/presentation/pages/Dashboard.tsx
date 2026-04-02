@@ -17,12 +17,12 @@ export function Dashboard({ onSelectDelivery, onAddCustomer }: DashboardProps) {
       address: 'Rua das Flores, 123 - Centro',
       time: '09:00',
       status: 'pending',
-      items: ['Recarga Água com Gás 20L'],
+      items: ['Recarga Água com Gás 1,5 L'],
       contractType: 'Comodato Semanal',
       lastDelivery: '2024-01-17',
       distance: '1.2 km',
       priority: 'high',
-      bottleType: '20L',
+      bottleType: '1,5 L',
       deliveryType: 'recarga'
     },
     {
@@ -45,12 +45,12 @@ export function Dashboard({ onSelectDelivery, onAddCustomer }: DashboardProps) {
       address: 'Rua Nova, 789 - Vila Nova',
       time: '11:45',
       status: 'completed',
-      items: ['Recarga Água com Gás 20L'],
+      items: ['Recarga Água com Gás 1,5 L'],
       contractType: 'Comodato Quinzenal',
       lastDelivery: '2024-01-03',
       distance: '0.8 km',
       priority: 'normal',
-      bottleType: '20L',
+      bottleType: '1,5 L',
       deliveryType: 'recarga'
     },
     {
@@ -59,12 +59,12 @@ export function Dashboard({ onSelectDelivery, onAddCustomer }: DashboardProps) {
       address: 'Rua da Paz, 321 - Jardim',
       time: '14:00',
       status: 'pending',
-      items: ['Recarga Água com Gás 20L'],
+      items: ['Recarga Água com Gás 1,5 L'],
       contractType: 'Comodato Quinzenal',
       lastDelivery: '2024-01-10',
       distance: '3.1 km',
       priority: 'high',
-      bottleType: '20L',
+      bottleType: '1,5 L',
       deliveryType: 'recarga'
     },
     {
@@ -87,12 +87,12 @@ export function Dashboard({ onSelectDelivery, onAddCustomer }: DashboardProps) {
       address: 'Rua das Palmeiras, 456 - Jardim Verde',
       time: '16:15',
       status: 'pending',
-      items: ['Troca Vasilhame 20L (Danificado)'],
+      items: ['Troca Vasilhame 1,5 L (Danificado)'],
       contractType: 'Comodato Semanal',
       lastDelivery: '2024-01-15',
       distance: '2.1 km',
       priority: 'normal',
-      bottleType: '20L',
+      bottleType: '1,5 L',
       deliveryType: 'troca'
     }
   ];

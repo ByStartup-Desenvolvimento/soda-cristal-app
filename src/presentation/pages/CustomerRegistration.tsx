@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '../../shared/ui/button';
@@ -8,11 +8,12 @@ import { Label } from '../../shared/ui/label';
 import { Textarea } from '../../shared/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../shared/ui/select';
 import { Checkbox } from '../../shared/ui/checkbox';
-import { ArrowLeft, User, MapPin, FileText, Search, Loader2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, User, MapPin, FileText, Search, Loader2, ExternalLink, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useClientesStore } from '../../domain/clientes/clienteStore';
 import { useUserStore } from '../../domain/auth/userStore';
+import { useRotas } from '../hooks/useRotas';
 import { clienteCadastroSchema, ClienteCadastroPayload } from '../../domain/clientes/model';
 import { formatCEP, formatCPFCNPJ, formatPhone } from '../../shared/utils/formatters';
 
@@ -24,6 +25,7 @@ interface CustomerRegistrationProps {
 export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistrationProps) {
   const { cadastrarCliente, isSubmitting } = useClientesStore();
   const { vendedorId } = useUserStore();
+  const { rotas, isLoading: loadingRotas } = useRotas();
   const [loadingCep, setLoadingCep] = useState(false);
 
   // Setup do formulário com ZOD
@@ -44,11 +46,12 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
       rg: '',
       data_nascimento: '',
       telefone2: '',
-      qtd_garrafa: 1,
+      qtd_garrafa: 0,
       qtd_garrafa_comprada: 0,
       dia_reposicao: '',
       obs: '',
-      rota: 'Rota Padrão', // TODO: Ajustar se necessário
+      rota: '', // Será atualizado via useEffect
+
       revendedor_xarope: false,
       revendedor_agua: false,
       cf_xarope: false,
@@ -59,7 +62,17 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
     }
   });
 
-  const { register, control, handleSubmit, setValue, watch, formState: { errors } } = form;
+  const { register, control, handleSubmit, setValue, getValues, watch, formState: { errors } } = form;
+
+  // Auto-seleciona a primeira rota assim que carregar
+  useEffect(() => {
+    if (rotas && rotas.length > 0) {
+      const atual = getValues('rota');
+      if (!atual) {
+        setValue('rota', rotas[0].nome);
+      }
+    }
+  }, [rotas, setValue, getValues]);
 
   // Busca de CEP
   const handleSearchCEP = async () => {
@@ -142,7 +155,7 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="cpf_cnpj">CPF/CNPJ *</Label>
+                <Label htmlFor="cpf_cnpj">CPF/CNPJ {watch('qtd_garrafa_comprada') > 0 ? '(opcional)' : '*'}</Label>
                 <Controller
                   control={control}
                   name="cpf_cnpj"
@@ -277,41 +290,110 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
           </CardHeader>
           <CardContent className="space-y-4">
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="dia_reposicao">Dia de Reposição *</Label>
-                <Controller
-                  control={control}
-                  name="dia_reposicao"
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Segunda">Segunda</SelectItem>
-                        <SelectItem value="Terca">Terça</SelectItem>
-                        <SelectItem value="Quarta">Quarta</SelectItem>
-                        <SelectItem value="Quinta">Quinta</SelectItem>
-                        <SelectItem value="Sexta">Sexta</SelectItem>
-                        <SelectItem value="Sabado">Sábado</SelectItem>
-                        <SelectItem value="Domingo">Domingo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.dia_reposicao && <p className="text-red-500 text-xs mt-1">{errors.dia_reposicao.message}</p>}
-              </div>
+            <div>
+              <Label htmlFor="dia_reposicao">Dia de Reposição</Label>
+              <Controller
+                control={control}
+                name="dia_reposicao"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione (opcional)..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Não definido">Não definido</SelectItem>
+                      <SelectItem value="Segunda">Segunda</SelectItem>
+                      <SelectItem value="Terca">Terça</SelectItem>
+                      <SelectItem value="Quarta">Quarta</SelectItem>
+                      <SelectItem value="Quinta">Quinta</SelectItem>
+                      <SelectItem value="Sexta">Sexta</SelectItem>
+                      <SelectItem value="Sabado">Sábado</SelectItem>
+                      <SelectItem value="Domingo">Domingo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.dia_reposicao && <p className="text-red-500 text-xs mt-1">{errors.dia_reposicao.message}</p>}
+            </div>
 
-              <div>
-                <Label htmlFor="qtd_garrafa">Qtd. Garrafas *</Label>
-                <Input
-                  type="number"
-                  {...register('qtd_garrafa')}
-                  min={1}
-                />
-                {errors.qtd_garrafa && <p className="text-red-500 text-xs mt-1">{errors.qtd_garrafa.message}</p>}
+            {/* Garrafas Consignadas */}
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-3">
+              <Label className="text-blue-700 font-semibold block">Quantidade Consignada</Label>
+              <div className="flex items-center justify-center gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-white"
+                  onClick={() => setValue('qtd_garrafa', Math.max(0, watch('qtd_garrafa') - 1))}
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <span className="text-xl font-bold w-12 text-center text-blue-900">
+                  {watch('qtd_garrafa')}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-white"
+                  onClick={() => setValue('qtd_garrafa', watch('qtd_garrafa') + 1)}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
+              {errors.qtd_garrafa && <p className="text-red-500 text-xs text-center">{errors.qtd_garrafa.message}</p>}
+            </div>
+
+            {/* Garrafas Compradas */}
+            <div className="bg-green-50 border border-green-100 rounded-lg p-4 space-y-3">
+              <Label className="text-green-700 font-semibold block">Quantidade Comprada</Label>
+              <div className="flex items-center justify-center gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-white"
+                  onClick={() => setValue('qtd_garrafa_comprada', Math.max(0, (watch('qtd_garrafa_comprada') || 0) - 1))}
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <span className="text-xl font-bold w-12 text-center text-green-900">
+                  {watch('qtd_garrafa_comprada') || 0}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 bg-white"
+                  onClick={() => setValue('qtd_garrafa_comprada', (watch('qtd_garrafa_comprada') || 0) + 1)}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {errors.qtd_garrafa_comprada && <p className="text-red-500 text-xs text-center">{errors.qtd_garrafa_comprada.message}</p>}
+            </div>
+
+            {/* Rota */}
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-3">
+              <Label htmlFor="rota" className="text-blue-700 font-semibold block">Informe a rota *</Label>
+              <Controller
+                control={control}
+                name="rota"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingRotas}>
+                    <SelectTrigger className="bg-white border-blue-200 text-black">
+                      <SelectValue placeholder={loadingRotas ? "Carregando rotas..." : "Selecione uma rota..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rotas.map(rota => (
+                        <SelectItem key={rota.id} value={rota.nome}>{rota.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.rota && <p className="text-red-500 text-xs mt-1">{errors.rota.message}</p>}
             </div>
 
             <div>
@@ -319,53 +401,79 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
               <Textarea {...register('obs')} placeholder="Observações gerais sobre o cliente" />
             </div>
 
-            {/* Checkboxes em Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-
-              <div className="flex items-center space-x-2 border p-3 rounded-md">
-                <Controller
-                  control={control}
-                  name="cf_agua"
-                  render={({ field }) => (
-                    <Checkbox id="cf_agua" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <Label htmlFor="cf_agua" className="cursor-pointer">Comodato Água</Label>
+            {/* Configuração de Produto - Agrupamentos */}
+            <div className="space-y-3 pt-2">
+              {/* Linha 1: Revendedores */}
+              <div className="border rounded-md p-3 grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    control={control}
+                    name="revendedor_agua"
+                    render={({ field }) => (
+                      <Checkbox id="revendedor_agua" checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="revendedor_agua" className="cursor-pointer text-sm">Revendedor Água</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    control={control}
+                    name="revendedor_xarope"
+                    render={({ field }) => (
+                      <Checkbox id="revendedor_xarope" checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="revendedor_xarope" className="cursor-pointer text-sm">Revendedor Xarope</Label>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-2 border p-3 rounded-md">
-                <Controller
-                  control={control}
-                  name="cf_xarope"
-                  render={({ field }) => (
-                    <Checkbox id="cf_xarope" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <Label htmlFor="cf_xarope" className="cursor-pointer">Comodato Xarope</Label>
+              {/* Linha 2: C. Final */}
+              <div className="border rounded-md p-3 grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    control={control}
+                    name="cf_agua"
+                    render={({ field }) => (
+                      <Checkbox id="cf_agua" checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="cf_agua" className="cursor-pointer text-sm">C. Final. Água</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    control={control}
+                    name="cf_xarope"
+                    render={({ field }) => (
+                      <Checkbox id="cf_xarope" checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="cf_xarope" className="cursor-pointer text-sm">C. Final. Xarope</Label>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-2 border p-3 rounded-md">
-                <Controller
-                  control={control}
-                  name="revendedor_agua"
-                  render={({ field }) => (
-                    <Checkbox id="revendedor_agua" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <Label htmlFor="revendedor_agua" className="cursor-pointer">Revendedor Água</Label>
+              {/* Linha 3: PE */}
+              <div className="border rounded-md p-3 grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    control={control}
+                    name="precoespecial_agua"
+                    render={({ field }) => (
+                      <Checkbox id="precoespecial_agua" checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="precoespecial_agua" className="cursor-pointer text-sm">PE Água</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    control={control}
+                    name="precoespecial_xarope"
+                    render={({ field }) => (
+                      <Checkbox id="precoespecial_xarope" checked={field.value} onCheckedChange={field.onChange} />
+                    )}
+                  />
+                  <Label htmlFor="precoespecial_xarope" className="cursor-pointer text-sm">PE Xarope</Label>
+                </div>
               </div>
-
-              <div className="flex items-center space-x-2 border p-3 rounded-md">
-                <Controller
-                  control={control}
-                  name="revendedor_xarope"
-                  render={({ field }) => (
-                    <Checkbox id="revendedor_xarope" checked={field.value} onCheckedChange={field.onChange} />
-                  )}
-                />
-                <Label htmlFor="revendedor_xarope" className="cursor-pointer">Revendedor Xarope</Label>
-              </div>
-
             </div>
 
           </CardContent>

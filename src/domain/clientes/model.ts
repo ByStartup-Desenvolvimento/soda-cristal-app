@@ -61,7 +61,7 @@ import { z } from 'zod';
 
 export const clienteCadastroSchema = z.object({
     nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
-    cpf_cnpj: z.string().min(11, 'Documento inválido').max(18, 'Documento inválido'),
+    cpf_cnpj: z.string().max(18, 'Documento inválido').default(''),
     rg: z.string().optional(),
     data_nascimento: z.string().optional(),
     telefone: z.string().min(10, 'Telefone inválido'),
@@ -76,13 +76,14 @@ export const clienteCadastroSchema = z.object({
     complemento: z.string().optional(),
 
     // Contrato
-    qtd_garrafa: z.coerce.number().min(1, 'Quantidade mínima é 1'),
+    qtd_garrafa: z.coerce.number().min(0, 'Quantidade não pode ser negativa').default(0),
     qtd_garrafa_comprada: z.coerce.number().optional().default(0),
-    dia_reposicao: z.string().min(1, 'Selecione o dia de reposição'),
+    dia_reposicao: z.string().optional().default(''),
     obs: z.string().optional(),
-    rota: z.string().optional().default('Rota Padrão'), // TODO: Pegar rota dinâmica se necessário
+    rota: z.string().optional().default('Rota Padrão'),
 
     // IDs e Flags
+    id: z.number().optional().default(0),
     vendedor: z.number(),
     tipo_cadastro: z.number().default(1), // 1 = Novo
     cliente_id_api: z.number().default(0),
@@ -96,14 +97,23 @@ export const clienteCadastroSchema = z.object({
     precoespecial_xarope: z.boolean().default(false),
 
     data_inativacao: z.string().default(''),
+}).superRefine((data, ctx) => {
+    const temGarrafaComprada = (data.qtd_garrafa_comprada ?? 0) > 0;
+    if (!temGarrafaComprada && (!data.cpf_cnpj || data.cpf_cnpj.replace(/\D/g, '').length < 11)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'CPF/CNPJ obrigatório quando não há garrafas compradas',
+            path: ['cpf_cnpj'],
+        });
+    }
 });
 
 export type ClienteCadastroPayload = z.infer<typeof clienteCadastroSchema>;
 
 export interface CadastroContratosPayload {
     contratos: {
-        novosContratos: ClienteCadastroPayload[];
-        alteracaoContrato: ClienteCadastroPayload[]; // Array vazio no cadastro
-        inativacoes: ClienteCadastroPayload[];       // Array vazio no cadastro
+        novosContratos?: ClienteCadastroPayload[];
+        alteracaoContrato?: ClienteCadastroPayload[];
+        inativacoes?: ClienteCadastroPayload[];
     };
 }

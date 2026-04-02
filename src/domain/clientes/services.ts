@@ -48,7 +48,7 @@ export const clientesServices = {
                     proxima_entrega: cliente.proxima_entrega || 'Não temos proxima entrega',
 
                     tipo_contrato: cliente.tipo_contrato || (cliente.observacao?.includes('Semanal') ? 'Comodato Semanal' : 'Comodato Quinzenal'),
-                    produto_preferido: cliente.produto_preferido || (cliente.cf_agua ? 'Água com Gás 20L' : 'Xarope de Cola'),
+                    produto_preferido: cliente.produto_preferido || (cliente.cf_agua ? 'Água com Gás 1,5 L' : 'Xarope de Cola'),
                 };
             });
     },
@@ -57,9 +57,27 @@ export const clientesServices = {
         // Monta a estrutura complexa que a API exige
         const apiPayload: CadastroContratosPayload = {
             contratos: {
-                novosContratos: [payload],
-                alteracaoContrato: [],
-                inativacoes: []
+                novosContratos: [payload]
+            }
+        };
+
+        return await clientesService.cadastrarCliente(apiPayload);
+    },
+
+    async alterarCliente(payload: ClienteCadastroPayload) {
+        const apiPayload: CadastroContratosPayload = {
+            contratos: {
+                alteracaoContrato: [{ ...payload, tipo_cadastro: 2 }]
+            }
+        };
+
+        return await clientesService.cadastrarCliente(apiPayload);
+    },
+
+    async inativarCliente(payload: ClienteCadastroPayload) {
+        const apiPayload: CadastroContratosPayload = {
+            contratos: {
+                inativacoes: [payload]
             }
         };
 
