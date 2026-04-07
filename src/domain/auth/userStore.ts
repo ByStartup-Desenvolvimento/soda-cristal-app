@@ -45,6 +45,8 @@ export const useUserStore = create<UserState>((set) => ({
                 localStorage.removeItem('vendedorId');
                 localStorage.removeItem('distribuidorId');
                 localStorage.removeItem('user');
+                localStorage.removeItem('soda-delivery-storage');
+                localStorage.removeItem('soda-rotas-storage');
 
                 set({
                     isLoggedIn: false,
@@ -82,6 +84,8 @@ export const useUserStore = create<UserState>((set) => ({
                 localStorage.removeItem('vendedorId');
                 localStorage.removeItem('distribuidorId');
                 localStorage.removeItem('user');
+                localStorage.removeItem('soda-delivery-storage');
+                localStorage.removeItem('soda-rotas-storage');
 
                 set({
                     isLoggedIn: false,
@@ -142,6 +146,7 @@ export const useUserStore = create<UserState>((set) => ({
         localStorage.removeItem('distribuidorId');
         localStorage.removeItem('user');
         localStorage.removeItem('soda-delivery-storage');
+        localStorage.removeItem('soda-rotas-storage');
         set({ isLoggedIn: false, user: null, vendedorId: null, distribuidorId: null });
     },
 }));
