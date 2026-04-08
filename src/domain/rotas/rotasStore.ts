@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Rota, RotaEntregaCompleta } from './models';
 import { rotasService } from './services';
 
@@ -14,6 +15,7 @@ interface RotasState {
     error: string | null;
     lastFetchTodaysRoutes: number | null; // Data do último fetch (timestamp)
     lastFetchRotas: number | null;
+    lastFetchDate: string | null;
     loadingStep: 'rotas' | 'clientes' | null;
     loadingProgress: { current: number; total: number } | null;
 
@@ -26,7 +28,9 @@ interface RotasState {
     clearError: () => void;
 }
 
-export const useRotasStore = create<RotasState>((set, get) => ({
+export const useRotasStore = create<RotasState>()(
+    persist(
+        (set, get) => ({
     // Estado inicial
     rotas: [],
     rotasDeHoje: [],
@@ -38,25 +42,40 @@ export const useRotasStore = create<RotasState>((set, get) => ({
     error: null,
     lastFetchTodaysRoutes: null,
     lastFetchRotas: null,
+    lastFetchDate: null,
     loadingStep: null,
     loadingProgress: null,
 
     // Carregar rotas do vendedor
     loadRotas: async (vendedorId: number, forceRefresh = false) => {
-        const CACHE_MINUTES = 5;
-        const CACHE_MS = CACHE_MINUTES * 60 * 1000;
+        const CACHE_MINUTES = 15;
+        const STALE_HOURS = 8;
         const now = Date.now();
         const state = get();
+        const today = new Date().toISOString().split('T')[0];
+        
+        const isNewDay = state.lastFetchDate !== today;
+        const cacheAge = state.lastFetchRotas ? now - state.lastFetchRotas : Infinity;
+
+        const validCache = cacheAge < CACHE_MINUTES * 60 * 1000;
+        const staleCache = cacheAge >= CACHE_MINUTES * 60 * 1000 && cacheAge < STALE_HOURS * 60 * 60 * 1000;
 
         // Se tem cache e ainda tá válido, e não forçamos recarregamento, sai fora pra economizar rede
-        if (!forceRefresh && state.lastFetchRotas && (now - state.lastFetchRotas < CACHE_MS)) {
+        if (!forceRefresh && !isNewDay && validCache) {
             return;
         }
 
-        set({ isLoading: true, error: null });
+        const shouldShowLoading = forceRefresh || isNewDay || !staleCache;
+
+        if (shouldShowLoading) {
+            set({ isLoading: true, error: null });
+        } else {
+            set({ error: null });
+        }
+        
         try {
             const rotas = await rotasService.getRotasVendedor(vendedorId);
-            set({ rotas, isLoading: false, lastFetchRotas: Date.now() });
+            set({ rotas, isLoading: false, lastFetchRotas: Date.now(), lastFetchDate: today });
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Erro ao carregar rotas';
             set({ error: message, isLoading: false });
@@ -65,27 +84,43 @@ export const useRotasStore = create<RotasState>((set, get) => ({
 
     // Carregar as rotas do dia de hoje e acumular todos os clientes
     loadTodaysRoutes: async (vendedorId: number, forceRefresh = false) => {
-        const CACHE_MINUTES = 5;
-        const CACHE_MS = CACHE_MINUTES * 60 * 1000;
+        const CACHE_MINUTES = 15;
+        const STALE_HOURS = 8;
         const now = Date.now();
         const state = get();
+        const today = new Date().toISOString().split('T')[0];
+
+        const isNewDay = state.lastFetchDate !== today;
+        const cacheAge = state.lastFetchTodaysRoutes ? now - state.lastFetchTodaysRoutes : Infinity;
+
+        const validCache = cacheAge < CACHE_MINUTES * 60 * 1000;
+        const staleCache = cacheAge >= CACHE_MINUTES * 60 * 1000 && cacheAge < STALE_HOURS * 60 * 60 * 1000;
 
         // Se tem cache e ainda tá válido, e não forçamos recarregamento, sai fora pra economizar rede
-        if (!forceRefresh && state.lastFetchTodaysRoutes && (now - state.lastFetchTodaysRoutes < CACHE_MS)) {
+        if (!forceRefresh && !isNewDay && validCache) {
             // console.log(`[Cache Hit] Rotas de hoje já carregadas há menos de ${CACHE_MINUTES}min`);
             return;
         }
 
-        set({ isLoading: true, loadingStep: 'rotas', loadingProgress: null, error: null, clientesRota: [] });
+        const shouldShowLoading = forceRefresh || isNewDay || !staleCache;
+
+        if (shouldShowLoading) {
+            set({ isLoading: true, loadingStep: 'rotas', loadingProgress: null, error: null, clientesRota: [] });
+        } else {
+            set({ error: null });
+        }
+
         try {
             const todaysRoutes = await rotasService.getTodaysRoutes(vendedorId);
             set({ rotasDeHoje: todaysRoutes });
 
-            set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: todaysRoutes.length } });
+            if (shouldShowLoading) {
+                set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: todaysRoutes.length } });
+            }
 
             // Busca clientes usando batching para evitar rate limit (429)
-            const BATCH_SIZE = 1;
-            const DELAY_MS = 300;
+            const BATCH_SIZE = 2;
+            const DELAY_MS = 150;
             const results = [];
             
             for (let i = 0; i < todaysRoutes.length; i += BATCH_SIZE) {
@@ -95,7 +130,9 @@ export const useRotasStore = create<RotasState>((set, get) => ({
                 );
                 results.push(...batchResults);
                 
-                set({ loadingProgress: { current: Math.min(i + BATCH_SIZE, todaysRoutes.length), total: todaysRoutes.length } });
+                if (shouldShowLoading) {
+                    set({ loadingProgress: { current: Math.min(i + BATCH_SIZE, todaysRoutes.length), total: todaysRoutes.length } });
+                }
                 
                 if (i + BATCH_SIZE < todaysRoutes.length) {
                     await new Promise(resolve => setTimeout(resolve, DELAY_MS));
@@ -112,7 +149,8 @@ export const useRotasStore = create<RotasState>((set, get) => ({
                 isLoading: false, 
                 loadingStep: null, 
                 loadingProgress: null, 
-                lastFetchTodaysRoutes: Date.now() 
+                lastFetchTodaysRoutes: Date.now(),
+                lastFetchDate: today 
             });
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Erro ao carregar rotas do dia';
@@ -132,8 +170,8 @@ export const useRotasStore = create<RotasState>((set, get) => ({
 
         set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: idsToLoad.length } });
 
-        const BATCH_SIZE = 1; // Reduzido de 2 para 1 para garantir estabilidade
-        const DELAY_MS = 300;
+        const BATCH_SIZE = 2; 
+        const DELAY_MS = 150;
         const accumulated: Record<number, RotaEntregaCompleta[]> = { ...existing };
 
         try {
@@ -189,4 +227,17 @@ export const useRotasStore = create<RotasState>((set, get) => ({
     },
 
     clearError: () => set({ error: null }),
-}));
+        }),
+        {
+            name: 'soda-rotas-storage',
+            storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                rotas: state.rotas,
+                rotasDeHoje: state.rotasDeHoje,
+                lastFetchTodaysRoutes: state.lastFetchTodaysRoutes,
+                lastFetchRotas: state.lastFetchRotas,
+                lastFetchDate: state.lastFetchDate,
+            }),
+        }
+    )
+);

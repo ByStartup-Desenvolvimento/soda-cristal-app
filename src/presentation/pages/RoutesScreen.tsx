@@ -42,7 +42,6 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const { rotas, isLoading, isLoadingDeliveries, loadingProgress, error, reload, deliveriesPorRota } = useRotas();
   const { selectRota } = useRotasStore();
-  console.log(rotas);
 
   // Adapter para converter Rota do domínio para o formato UI
   const mappedRoutes: RouteUI[] = rotas.map(rota => {

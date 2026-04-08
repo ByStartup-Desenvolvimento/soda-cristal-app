@@ -72,9 +72,6 @@ export function PDVStandalone({ delivery, customerName: propCustomerName, onBack
         //TODO: remover quando tiver o vendedorId apos entender como usa a URL de produtos
         let distribuidorIdNormalized = Number(distribuidorId + "0")
         const produtosData = await produtosService.getProdutos(distribuidorIdNormalized);
-        console.log("ID DISTRIBUIDOR:" + distribuidorIdNormalized);
-        console.log(produtosData);
-
 
         setProdutos(produtosData);
 
@@ -356,7 +353,6 @@ export function PDVStandalone({ delivery, customerName: propCustomerName, onBack
         {filteredProducts.map((product) => {
           const quantityInCart = getCartItemQuantity(product.id);
           const price = getProductPrice(product);
-          console.log(product);
 
           return (
             <Card key={product.id} className="hover:shadow-md transition-shadow">
