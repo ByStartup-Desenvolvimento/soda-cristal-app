@@ -74,6 +74,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
   const deliveries: Delivery[] = [
     {
       id: 'del-001',
+      clienteId: 1,
       orderId: 'PED-2024-001',
       orderCode: 'SCT001',
       customerName: 'João Silva',
@@ -88,6 +89,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
     },
     {
       id: 'del-002',
+      clienteId: 2,
       orderId: 'PED-2024-002',
       orderCode: 'SCT002',
       customerName: 'Maria Santos',
@@ -101,6 +103,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
     },
     {
       id: 'del-003',
+      clienteId: 3,
       orderId: 'PED-2024-003',
       orderCode: 'SCT003',
       customerName: 'Carlos Oliveira',
@@ -114,6 +117,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
     },
     {
       id: 'del-004',
+      clienteId: 4,
       orderId: 'PED-2024-004',
       orderCode: 'SCT004',
       customerName: 'Ana Costa',
@@ -128,6 +132,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
     },
     {
       id: 'del-005',
+      clienteId: 5,
       orderId: 'PED-2024-005',
       orderCode: 'SCT005',
       customerName: 'Roberto Lima',
