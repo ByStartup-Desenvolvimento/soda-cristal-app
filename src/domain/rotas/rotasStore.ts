@@ -234,6 +234,8 @@ export const useRotasStore = create<RotasState>()(
             partialize: (state) => ({
                 rotas: state.rotas,
                 rotasDeHoje: state.rotasDeHoje,
+                clientesRota: state.clientesRota,
+                deliveriesPorRota: state.deliveriesPorRota,
                 lastFetchTodaysRoutes: state.lastFetchTodaysRoutes,
                 lastFetchRotas: state.lastFetchRotas,
                 lastFetchDate: state.lastFetchDate,
