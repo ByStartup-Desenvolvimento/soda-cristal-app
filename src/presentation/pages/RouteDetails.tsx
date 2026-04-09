@@ -9,12 +9,12 @@ import { Input } from '../../shared/ui/input';
 import { ClienteEditSheet } from '../components/ClienteEditSheet';
 import { ClienteDesativarSheet } from '../components/ClienteDesativarSheet';
 import { CheckInDescarteSheet } from '../components/CheckInDescarteSheet';
-import { formatPhone, formatApiDate } from '@/shared/utils/formatters';
+import { formatPhone} from '@/shared/utils/formatters';
 
 import { Delivery, DeliveryStatusData } from '../../domain/deliveries/models';
+import { mapClienteToDelivery } from '../../domain/deliveries/delivery-mapper';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
-import { rotasService } from '../../domain/rotas/services';
-import { RotaEntregaCompleta, PrioridadeCliente } from '../../domain/rotas/models';
+import { RotaEntregaCompleta } from '../../domain/rotas/models';
 
 interface FiltrosEstrategicos {
   periodo15a29: boolean;
@@ -362,40 +362,6 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
     }
   }, [route?.id, route?.deliveries, loadClientesRota]);
 
-  const mapPrioridade = useCallback((prioridade: PrioridadeCliente): 'high' | 'medium' | 'low' => {
-    switch (prioridade) {
-      case 'urgente': return 'high';
-      case 'normal': return 'medium';
-      case 'baixa': return 'low';
-      default: return 'medium';
-    }
-  }, []);
-
-  const mapClienteToDelivery = useCallback((item: RotaEntregaCompleta): Delivery => {
-    return {
-      id: item.rotaentrega.id.toString(),
-      clienteId: item.cliente.id,
-      orderId: `PED-${item.rotaentrega.id}`,
-      orderCode: `SCT-${item.cliente.id}`,
-      customerName: item.cliente.nome,
-      customerPhone: item.cliente.celular || item.cliente.celular2 || '',
-      address: `${item.cliente.rua}, ${item.cliente.numero} - ${item.cliente.bairro}`,
-      bottles: {
-        quantity: item.rotaentrega.num_garrafas || 0,
-        size: '1,5 L'
-      },
-      status: 'pending',
-      priority: mapPrioridade(rotasService.calcularPrioridade(item)),
-      estimatedTime: formatApiDate(new Date()),
-      routeName: item.rota.nome,
-      notes: item.cliente.observacao || '',
-      latitude: item.cliente.latitude,
-      longitude: item.cliente.longitude,
-      diasSemAtendimento: Number(item.diassematendimento) || 0,
-      diasSemConsumo: Number(item.diassemconsumo) || 0,
-    };
-  }, [mapPrioridade]);
-
   const deliveries = useMemo(() => {
     if (route?.deliveries && route.deliveries.length > 0) {
       return route.deliveries;
@@ -403,7 +369,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
     return clientesRota
       .filter(item => item.cliente.ativo === 1)
       .map(mapClienteToDelivery);
-  }, [route?.deliveries, clientesRota, mapClienteToDelivery]);
+  }, [route?.deliveries, clientesRota]);
 
   const filtrosAtivosCount = useMemo(() => {
     return Object.values(filtros).filter(Boolean).length;
