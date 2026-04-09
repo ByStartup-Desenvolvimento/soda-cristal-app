@@ -60,8 +60,9 @@ export const useRotasStore = create<RotasState>()(
         const validCache = cacheAge < CACHE_MINUTES * 60 * 1000;
         const staleCache = cacheAge >= CACHE_MINUTES * 60 * 1000 && cacheAge < STALE_HOURS * 60 * 60 * 1000;
 
-        // Se tem cache e ainda tá válido, e não forçamos recarregamento, sai fora pra economizar rede
-        if (!forceRefresh && !isNewDay && validCache) {
+        // Se tem cache válido E dados na memória, sai fora pra economizar rede
+        const hasData = state.rotas.length > 0;
+        if (!forceRefresh && !isNewDay && validCache && hasData) {
             return;
         }
 
@@ -96,9 +97,9 @@ export const useRotasStore = create<RotasState>()(
         const validCache = cacheAge < CACHE_MINUTES * 60 * 1000;
         const staleCache = cacheAge >= CACHE_MINUTES * 60 * 1000 && cacheAge < STALE_HOURS * 60 * 60 * 1000;
 
-        // Se tem cache e ainda tá válido, e não forçamos recarregamento, sai fora pra economizar rede
-        if (!forceRefresh && !isNewDay && validCache) {
-            // console.log(`[Cache Hit] Rotas de hoje já carregadas há menos de ${CACHE_MINUTES}min`);
+        // Se tem cache válido E dados na memória, sai fora pra economizar rede
+        const hasData = state.clientesRota.length > 0;
+        if (!forceRefresh && !isNewDay && validCache && hasData) {
             return;
         }
 
@@ -230,12 +231,21 @@ export const useRotasStore = create<RotasState>()(
         }),
         {
             name: 'soda-rotas-storage',
-            storage: createJSONStorage(() => localStorage),
+            storage: createJSONStorage(() => ({
+                getItem: (name: string) => localStorage.getItem(name),
+                setItem: (name: string, value: string) => {
+                    try {
+                        localStorage.setItem(name, value);
+                    } catch {
+                        // Quota exceeded — dados pesados vivem apenas na memória
+                        console.warn('[Storage] Quota exceeded, dados vivem apenas em memória');
+                    }
+                },
+                removeItem: (name: string) => localStorage.removeItem(name),
+            })),
             partialize: (state) => ({
                 rotas: state.rotas,
                 rotasDeHoje: state.rotasDeHoje,
-                clientesRota: state.clientesRota,
-                deliveriesPorRota: state.deliveriesPorRota,
                 lastFetchTodaysRoutes: state.lastFetchTodaysRoutes,
                 lastFetchRotas: state.lastFetchRotas,
                 lastFetchDate: state.lastFetchDate,
