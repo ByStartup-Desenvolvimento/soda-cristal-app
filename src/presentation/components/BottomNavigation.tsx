@@ -13,13 +13,15 @@ export function BottomNavigation() {
       id: 'deliveries',
       label: 'Entregas',
       icon: Home,
-      path: '/deliveries'
+      path: '/deliveries',
+      preload: () => import('../pages/DeliveriesOverview')
     },
     {
       id: 'routes',
       label: 'Rotas',
       icon: Route,
-      path: '/routes'
+      path: '/routes',
+      preload: () => import('../pages/RoutesScreen')
     },
     {
       id: 'logout',
@@ -31,15 +33,16 @@ export function BottomNavigation() {
       id: 'customers',
       label: 'Clientes',
       icon: Users,
-      path: '/customers'
+      path: '/customers',
+      preload: () => import('../pages/CustomerList')
     },
     {
       id: 'pdv',
       label: 'PDV',
       icon: ShoppingCart,
-      path: '/pdv'
+      path: '/pdv',
+      preload: () => import('../pages/PDVStandalone')
     }
-
   ];
 
   // Helper to check if a path is active
@@ -65,6 +68,8 @@ export function BottomNavigation() {
                 : 'text-muted-foreground hover:text-primary/70'
                 }`}
               onClick={() => { item.onClick ? item.onClick() : navigate(item.path) }}
+              onMouseEnter={() => item.preload?.()}
+              onTouchStart={() => item.preload?.()}
             >
               <div className={`p-2 rounded-xl transition-all duration-200 ${isActive
                 ? 'bg-primary/10 scale-105'

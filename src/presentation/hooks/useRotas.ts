@@ -17,6 +17,8 @@ export function useRotas() {
         clearError,
         loadingStep,
         loadingProgress,
+        hasHydratedFromStorage,
+        offlineModeHint,
     } = useRotasStore();
 
     // Busca vendedorId do localStorage
@@ -24,18 +26,16 @@ export function useRotas() {
     const vendedorId = vendedorIdStr ? Number(vendedorIdStr) : null;
 
     useEffect(() => {
-        if (vendedorId) {
-            loadRotas(vendedorId);
-        }
-    }, [vendedorId, loadRotas]);
+        if (!hasHydratedFromStorage || !vendedorId) return;
+        loadRotas(vendedorId);
+    }, [vendedorId, loadRotas, hasHydratedFromStorage]);
 
     // Após carregar as rotas, busca deliveries de cada uma em paralelo
     useEffect(() => {
-        if (rotas.length > 0) {
-            const rotaIds = rotas.map(r => r.id);
-            loadDeliveriesPorRotas(rotaIds);
-        }
-    }, [rotas, loadDeliveriesPorRotas]);
+        if (!hasHydratedFromStorage || rotas.length === 0) return;
+        const rotaIds = rotas.map(r => r.id);
+        loadDeliveriesPorRotas(rotaIds);
+    }, [rotas, loadDeliveriesPorRotas, hasHydratedFromStorage]);
 
     return {
         rotas,
@@ -47,6 +47,7 @@ export function useRotas() {
         clearError,
         loadingStep,
         loadingProgress,
+        offlineModeHint,
     };
 }
 

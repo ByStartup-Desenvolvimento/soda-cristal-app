@@ -63,8 +63,11 @@ export const rotasService = {
                 }
             }
 
-            // Fallback para strings exatas (Ex: "Terça-Feira")
-            return r.frequencia?.includes(today);
+            // Fallback: suporta nomes completos ("Sexta-Feira") e curtos ("Sexta")
+            // Ex: "Terça e Sexta", "Quarta-Feira", "Segunda, Quarta e Sexta-Feira"
+            const todayLower = today.toLowerCase();
+            const todayShort = todayLower.split('-')[0];
+            return freq.includes(todayLower) || freq.includes(todayShort);
         });
     },
 

@@ -7,6 +7,8 @@ import { Search, MapPin, Route, AlertCircle, RefreshCw, Loader2 } from 'lucide-r
 import { useRotas } from '../hooks/useRotas';
 import { Rota } from '../../domain/rotas/models';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
+import { useNetworkStore } from '../../shared/store/networkStore';
+import { OfflineDataBanner } from '../components/OfflineDataBanner';
 import type { RotaEntregaCompleta } from '../../domain/rotas/models';
 
 interface RouteUI extends Rota {
@@ -40,9 +42,14 @@ function getZoneFromDeliveries(deliveries: RotaEntregaCompleta[]): string {
 
 export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const { rotas, isLoading, isLoadingDeliveries, loadingProgress, error, reload, deliveriesPorRota } = useRotas();
+  const { rotas, isLoading, isLoadingDeliveries, loadingProgress, error, reload, deliveriesPorRota, offlineModeHint } = useRotas();
   const { selectRota } = useRotasStore();
-  console.log(rotas);
+  const isOnline = useNetworkStore(s => s.isOnline);
+
+  const showOfflineBanner =
+    Boolean(offlineModeHint) || (!isOnline && rotas.length > 0);
+  const offlineBannerText =
+    offlineModeHint ?? 'Sem conexão — exibindo dados salvos';
 
   // Adapter para converter Rota do domínio para o formato UI
   const mappedRoutes: RouteUI[] = rotas.map(rota => {
@@ -121,7 +128,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
     );
   }
 
-  if (error) {
+  if (error && rotas.length === 0) {
     return (
       <div className="p-4 flex flex-col items-center justify-center h-[calc(100vh-100px)] text-center space-y-4">
         <AlertCircle className="w-12 h-12 text-red-500" />
@@ -136,12 +143,29 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
 
   return (
     <div className="p-4 space-y-4 pb-20">
+      {showOfflineBanner ? <OfflineDataBanner message={offlineBannerText} /> : null}
+      {error && rotas.length > 0 ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Rotas Disponíveis</h1>
-        <p className="text-sm text-muted-foreground">
-          {totalPendingRoutes} rotas pendentes • {totalDeliveries} entregas totais
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">Rotas Disponíveis</h1>
+          <p className="text-sm text-muted-foreground">
+            {totalPendingRoutes} rotas pendentes • {totalDeliveries} entregas totais
+          </p>
+        </div>
+        <Button 
+          onClick={reload} 
+          variant="outline" 
+          size="sm"
+          className="gap-2 shrink-0 border-green-200 text-green-700 hover:bg-green-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Sincronizar
+        </Button>
       </div>
 
       {/* Progress Bar Inline (Non-blocking) */}

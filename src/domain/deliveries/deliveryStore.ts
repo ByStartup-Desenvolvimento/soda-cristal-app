@@ -35,6 +35,9 @@ export const useDeliveryStore = create<DeliveryState>()(
         }),
         {
             name: 'soda-delivery-storage',
+            partialize: (state) => ({
+                deliveryStatuses: state.deliveryStatuses,
+            }),
         }
     )
 );

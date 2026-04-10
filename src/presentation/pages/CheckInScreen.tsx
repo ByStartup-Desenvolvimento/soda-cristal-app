@@ -88,7 +88,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       }
 
       // Registro de presença (check-in inicial)
-      await checkInService.registrarPresenca(
+      const presenca = await checkInService.registrarPresenca(
         vendedorId,
         rotaEntregaId,
         delivery.clienteId,
@@ -96,6 +96,10 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         Number(lat),
         Number(lng)
       );
+
+      if (presenca.queued) {
+        toast.info('Sem conexão: presença salva e será enviada ao reconectar.');
+      }
 
       // Show status selection screen
       setShowStatusSelection(true);
@@ -135,7 +139,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         'absent-no-return': 'Ausente - Não retornar'
       };
 
-      await checkInService.realizarCheckIn({
+      const resultado = await checkInService.realizarCheckIn({
         rota_entrega: rotaEntregaId,
         cliente_id: delivery.clienteId,
         data_checkin: nowFormatted,
@@ -161,7 +165,9 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         'absent-no-return': 'Cliente ausente - Não retornar'
       };
 
-      if (!hasSale) {
+      if (resultado.queued) {
+        toast.info('Sem conexão: atendimento salvo no aparelho e será sincronizado ao reconectar.');
+      } else if (!hasSale) {
         toast.success(
           <div>
             <p><strong>{statusMessages[status]}</strong></p>

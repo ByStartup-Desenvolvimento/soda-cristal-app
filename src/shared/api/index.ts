@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 import { API_CONFIG } from './config';
+import { isNetworkError } from './networkUtils';
 
 const api = axios.create({
     baseURL: API_CONFIG.BASE_URL,
@@ -30,6 +31,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Sem resposta HTTP: não tratar como sessão inválida
+        if (isNetworkError(error)) {
+            return Promise.reject(error);
+        }
+
         // Se receber 401 (Unauthorized), o token pode ter expirado ou usuário inativo
         if (error.response?.status === 401) {
             const mensagemErro = error.response?.data?.message || 'Sua sessão expirou.';

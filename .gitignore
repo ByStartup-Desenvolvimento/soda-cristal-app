@@ -55,7 +55,7 @@ coverage/
 # Optional REPL history
 .node_repl_history
 
-# Capacitor / Android
+# Capacitor / Android (artefatos locais; o projeto em android/ permanece versionado)
 android/app/build/
 android/.gradle/
 android/build/
@@ -65,3 +65,5 @@ android/.idea/
 *.apk
 *.aab
 *.keystore
+
+docs/Implementation/
