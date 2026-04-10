@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { userService, LoginRequest } from '../../shared/api/services/userService';
 import type { User } from './models';
 import { isTokenValid } from '../../shared/utils/tokenValidator';
+import { useRotasStore } from '../rotas/rotasStore';
+import { useDeliveryStore } from '../deliveries/deliveryStore';
+import { useOutboxStore } from '../sync/outboxStore';
+import { useSyncStore } from '../sync/syncStore';
 
 const AUTH_STORAGE_KEYS = ['auth_token', 'vendedorId', 'distribuidorId', 'user', 'soda-delivery-storage', 'soda-rotas-storage'] as const;
 
@@ -96,7 +100,40 @@ export const useUserStore = create<UserState>((set) => ({
     },
 
     logout: () => {
+        useOutboxStore.setState({ items: [] });
+        useSyncStore.getState().resetForLogout();
+        useRotasStore.setState({
+            hasHydratedFromStorage: false,
+            offlineModeHint: null,
+            rotas: [],
+            rotasDeHoje: [],
+            rotaAtual: null,
+            clientesRota: [],
+            deliveriesPorRota: {},
+            isLoading: false,
+            isLoadingDeliveries: false,
+            error: null,
+            lastFetchTodaysRoutes: null,
+            lastFetchRotas: null,
+            lastFetchDate: null,
+            loadingStep: null,
+            loadingProgress: null,
+        });
+        useDeliveryStore.setState({
+            selectedDelivery: null,
+            selectedRoute: null,
+            deliveryStatuses: {},
+        });
+
         clearAuthStorage();
+
+        void Promise.all([
+            useOutboxStore.persist.clearStorage(),
+            useRotasStore.persist.clearStorage(),
+            useSyncStore.persist.clearStorage(),
+            useDeliveryStore.persist.clearStorage(),
+        ]);
+
         set({ isLoggedIn: false, user: null, vendedorId: null, distribuidorId: null });
     },
 }));

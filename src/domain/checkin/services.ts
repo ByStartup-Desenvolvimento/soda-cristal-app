@@ -1,38 +1,56 @@
 import { checkInApiService } from '../../shared/api/services/checkInServices';
+import { isNetworkError } from '../../shared/api/networkUtils';
 import { useDeliveryStore } from '../deliveries/deliveryStore';
+import { useOutboxStore } from '../sync/outboxStore';
 import { CheckInRequest, MotivoDescarteLabel } from './models';
+
+function applyLocalDeliveryStatusFromRequest(request: CheckInRequest): void {
+    useDeliveryStore.getState().updateDeliveryStatus(String(request.rota_entrega), {
+        checkInStatus: request.status || (request.quantidade_vendida > 0 ? 'delivered' : 'no-sale'),
+        hadSale: request.teve_venda,
+        timestamp: new Date().toISOString(),
+    });
+}
+
+export interface CheckInSendResult {
+    /** Enviado com sucesso à API nesta tentativa. */
+    sent: boolean;
+    /** Enfileirado para envio quando a rede voltar. */
+    queued: boolean;
+}
 
 export const checkInService = {
     /**
      * Realiza o check-in completo do atendimento
      */
-    async realizarCheckIn(request: CheckInRequest): Promise<void> {
+    async realizarCheckIn(request: CheckInRequest): Promise<CheckInSendResult> {
+        const body = {
+            rota_entrega: request.rota_entrega,
+            cliente_id: request.cliente_id,
+            data_checkin: request.data_checkin,
+            vendedor: request.vendedor,
+            observacao: request.observacao,
+            dentro_raio: request.dentro_raio,
+            latitude: request.latitude,
+            longitude: request.longitude,
+            quantidade_garrafas: request.quantidade_garrafas,
+            quantidade_vendida: request.quantidade_vendida,
+            teve_venda: request.teve_venda ? 1 : 0,
+        };
+
         try {
-            // 1. Enviar para a API utilizando o endpoint unificado (objeto direto)
-            await checkInApiService.postCheckIn(request.vendedor, {
-                rota_entrega: request.rota_entrega,
-                cliente_id: request.cliente_id,
-                data_checkin: request.data_checkin,
-                vendedor: request.vendedor,
-                observacao: request.observacao,
-                dentro_raio: request.dentro_raio,
-                latitude: request.latitude,
-                longitude: request.longitude,
-                quantidade_garrafas: request.quantidade_garrafas,
-                quantidade_vendida: request.quantidade_vendida,
-                teve_venda: request.teve_venda ? 1 : 0
-            });
-
-            // 2. Atualizar o estado local (store)
-            // Extraímos o status da observação ou mapeamos de volta se necessário
-            // Por enquanto mantemos a lógica de UI baseada no que foi enviado
-            useDeliveryStore.getState().updateDeliveryStatus(String(request.rota_entrega), {
-                checkInStatus: request.status || (request.quantidade_vendida > 0 ? 'delivered' : 'no-sale'),
-                hadSale: request.teve_venda,
-                timestamp: new Date().toISOString()
-            });
-
-        } catch (error) {
+            await checkInApiService.postCheckIn(request.vendedor, body);
+            applyLocalDeliveryStatusFromRequest(request);
+            return { sent: true, queued: false };
+        } catch (error: unknown) {
+            if (isNetworkError(error)) {
+                useOutboxStore.getState().enqueueCheckInFull({
+                    vendedorId: request.vendedor,
+                    body,
+                });
+                applyLocalDeliveryStatusFromRequest(request);
+                return { sent: false, queued: true };
+            }
             console.error('Erro ao realizar check-in:', error);
             throw error;
         }
@@ -66,7 +84,14 @@ export const checkInService = {
     /**
      * Realiza um check-in simples (apenas registro de presença)
      */
-    async registrarPresenca(vendedorId: number, rotaEntregaId: number, clienteId: number, data: string, lat: number, lng: number): Promise<void> {
+    async registrarPresenca(
+        vendedorId: number,
+        rotaEntregaId: number,
+        clienteId: number,
+        data: string,
+        lat: number,
+        lng: number
+    ): Promise<CheckInSendResult> {
         try {
             await checkInApiService.postCheckIn(vendedorId, {
                 rota_entrega: rotaEntregaId,
@@ -76,13 +101,25 @@ export const checkInService = {
                 latitude: lat,
                 longitude: lng,
                 dentro_raio: true,
-                observacao: "Check-in inicial",
-                observacao_descart: "",
-                anotacoes: ""
+                observacao: 'Check-in inicial',
+                observacao_descart: '',
+                anotacoes: '',
             });
-        } catch (error) {
+            return { sent: true, queued: false };
+        } catch (error: unknown) {
+            if (isNetworkError(error)) {
+                useOutboxStore.getState().enqueueCheckInPresenca({
+                    vendedorId,
+                    rota_entrega: rotaEntregaId,
+                    cliente_id: clienteId,
+                    data_checkin: data,
+                    latitude: lat,
+                    longitude: lng,
+                });
+                return { sent: false, queued: true };
+            }
             console.error('Erro ao registrar presença:', error);
             throw error;
         }
-    }
+    },
 };

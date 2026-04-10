@@ -2,7 +2,11 @@ import { useUserStore } from "./domain/auth/userStore";
 import { useUiStore } from "./shared/store/uiStore";
 import { useDeliveryStore } from "./domain/deliveries/deliveryStore";
 import { useRotasStore } from "./domain/rotas/rotasStore";
+import { useOutboxStore } from "./domain/sync/outboxStore";
+import { useSyncStore, pullCriticalDataAfterReconnect } from "./domain/sync/syncStore";
+import { flushOutbox } from "./domain/sync/flushOutbox";
 import { syncNetworkFromNavigator } from "./shared/store/networkStore";
+import { PendingSyncBanner } from "./presentation/components/PendingSyncBanner";
 import { Toaster } from "./shared/ui/sonner";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import React, { useEffect, lazy, Suspense } from "react";
@@ -49,6 +53,7 @@ export default function App() {
   const isInitialized = useUserStore(s => s.isInitialized);
   const vendedorId = useUserStore(s => s.vendedorId);
   const setHasHydratedFromStorage = useRotasStore(s => s.setHasHydratedFromStorage);
+  const hasHydratedFromStorage = useRotasStore(s => s.hasHydratedFromStorage);
 
   const selectedCustomer = useUiStore(s => s.selectedCustomer);
   const setSelectedCustomer = useUiStore(s => s.setSelectedCustomer);
@@ -68,21 +73,61 @@ export default function App() {
     }
   }, [initializeAuth, isInitialized]);
 
-  // Hidrata o rotasStore do IndexedDB somente após a auth estar pronta e o usuário logado.
-  // Só libera loads da API depois do rehydrate (evita corrida com cache vazio).
+  // Hidrata rotas, outbox e sync do IndexedDB após auth; libera loads da API só com rotas reidratadas.
   useEffect(() => {
     if (!isInitialized || !isLoggedIn) {
       setHasHydratedFromStorage(false);
       return;
     }
     let cancelled = false;
-    void Promise.resolve(useRotasStore.persist.rehydrate()).then(() => {
+    void Promise.all([
+      useRotasStore.persist.rehydrate(),
+      useOutboxStore.persist.rehydrate(),
+      useSyncStore.persist.rehydrate(),
+    ]).then(() => {
       if (!cancelled) setHasHydratedFromStorage(true);
     });
     return () => {
       cancelled = true;
     };
   }, [isInitialized, isLoggedIn, setHasHydratedFromStorage]);
+
+  // Primeiro sync completo (bootstrap) quando ainda não há lastFullSyncAt e há rede.
+  useEffect(() => {
+    if (!isInitialized || !isLoggedIn || !vendedorId || !hasHydratedFromStorage) return;
+    void useSyncStore.getState().runBootstrapIfNeeded(vendedorId);
+  }, [isInitialized, isLoggedIn, vendedorId, hasHydratedFromStorage]);
+
+  // Ao voltar online ou focar o app: envia outbox e puxa dados críticos (TTL do rotasStore).
+  useEffect(() => {
+    if (!isLoggedIn || !vendedorId) return;
+
+    const runFlushAndMaybePull = () => {
+      syncNetworkFromNavigator();
+      void flushOutbox();
+      void pullCriticalDataAfterReconnect(vendedorId);
+    };
+
+    if (typeof navigator !== "undefined" && navigator.onLine) {
+      void flushOutbox();
+    }
+
+    const onOnline = () => runFlushAndMaybePull();
+    window.addEventListener("online", onOnline);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncNetworkFromNavigator();
+        void flushOutbox();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [isLoggedIn, vendedorId]);
 
   // Conectividade: navigator + eventos. Com Capacitor, complemente com @capacitor/network (ver networkStore.ts).
   useEffect(() => {
@@ -114,6 +159,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <PendingSyncBanner />
       <div className="flex-1 overflow-hidden">
         <Suspense fallback={<PageLoader />}>
           <Routes>

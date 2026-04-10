@@ -4,6 +4,7 @@ import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import type { Rota, RotaEntregaCompleta } from './models';
 import { rotasService } from './services';
 import { isNetworkError } from '../../shared/api/networkUtils';
+import { useNetworkStore } from '../../shared/store/networkStore';
 
 export const OFFLINE_CACHE_MESSAGE = 'Sem conexão — exibindo dados salvos';
 
@@ -63,6 +64,20 @@ export const useRotasStore = create<RotasState>()(
     loadRotas: async (vendedorId: number, forceRefresh = false) => {
         if (!get().hasHydratedFromStorage) return;
 
+        if (!useNetworkStore.getState().isOnline) {
+            const s = get();
+            if (s.rotas.length > 0) {
+                set({ isLoading: false, offlineModeHint: OFFLINE_CACHE_MESSAGE, error: null });
+                return;
+            }
+            set({
+                isLoading: false,
+                error: 'Sem conexão. Não há rotas salvas para exibir.',
+                offlineModeHint: null,
+            });
+            return;
+        }
+
         const CACHE_MINUTES = 480; // 8h — rotas mudam ~1x/mês, cache agressivo para economizar rede
         const STALE_HOURS = 8;
         const now = Date.now();
@@ -88,7 +103,7 @@ export const useRotasStore = create<RotasState>()(
         } else {
             set({ error: null });
         }
-        
+
         try {
             const rotas = await rotasService.getRotasVendedor(vendedorId);
             set({
@@ -137,6 +152,28 @@ export const useRotasStore = create<RotasState>()(
         }
 
         const shouldShowLoading = forceRefresh || isNewDay || !staleCache;
+
+        if (!useNetworkStore.getState().isOnline) {
+            const hasData = state.clientesRota.length > 0 || state.rotasDeHoje.length > 0;
+            if (hasData) {
+                set({
+                    isLoading: false,
+                    loadingStep: null,
+                    loadingProgress: null,
+                    offlineModeHint: OFFLINE_CACHE_MESSAGE,
+                    error: null,
+                });
+                return;
+            }
+            set({
+                isLoading: false,
+                loadingStep: null,
+                loadingProgress: null,
+                error: 'Sem conexão. Sincronize com a internet para baixar as entregas do dia.',
+                offlineModeHint: null,
+            });
+            return;
+        }
 
         if (shouldShowLoading) {
             // Mantém snapshot local até o novo payload chegar (offline / refresh)
@@ -220,6 +257,16 @@ export const useRotasStore = create<RotasState>()(
         const idsToLoad = rotaIds.filter(id => !existing[id]);
         if (idsToLoad.length === 0) return;
 
+        if (!useNetworkStore.getState().isOnline) {
+            set({
+                isLoadingDeliveries: false,
+                loadingStep: null,
+                loadingProgress: null,
+                offlineModeHint: OFFLINE_CACHE_MESSAGE,
+            });
+            return;
+        }
+
         set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: idsToLoad.length } });
 
         const BATCH_SIZE = 5; // Com < 10 rotas/dia, reduz de 5 batches para no máximo 2
@@ -285,6 +332,24 @@ export const useRotasStore = create<RotasState>()(
         if (!get().hasHydratedFromStorage) return;
 
         const cached = get().deliveriesPorRota[rotaId];
+        if (!useNetworkStore.getState().isOnline) {
+            if (cached && cached.length > 0) {
+                set({
+                    clientesRota: cached,
+                    isLoading: false,
+                    offlineModeHint: OFFLINE_CACHE_MESSAGE,
+                    error: null,
+                });
+                return;
+            }
+            set({
+                isLoading: false,
+                error: 'Sem conexão. Não há clientes salvos desta rota.',
+                offlineModeHint: null,
+            });
+            return;
+        }
+
         set({ isLoading: true, error: null });
         try {
             const clientes = await rotasService.getClientesPorRota(rotaId);
