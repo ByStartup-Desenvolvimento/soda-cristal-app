@@ -40,6 +40,14 @@ export default function App() {
     }
   }, [initialzedAuth, isInitialized]);
 
+  useEffect(() => {
+    if (isLoggedIn) {
+      import("./presentation/pages/DeliveriesOverview");
+      import("./presentation/pages/RoutesScreen");
+      import("./presentation/pages/RouteDetails");
+    }
+  }, [isLoggedIn]);
+
   if (!isInitialized) {
     return <div>Carregando...</div>;
   }
