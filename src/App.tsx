@@ -8,9 +8,10 @@ import React, { useEffect, lazy, Suspense } from "react";
 import { LoginScreen } from "./presentation/pages/LoginScreen";
 import { BottomNavigation } from "./presentation/components/BottomNavigation";
 import { PageLoader } from "./presentation/components/ui/PageLoader";
+import { Delivery, CheckInStatus } from "./domain/deliveries/models";
 
 // Recarrega a página automaticamente quando um chunk falha por deploy novo (hashes stale)
-function lazyWithChunkRetry<T extends React.ComponentType<never>>(
+function lazyWithChunkRetry<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>
 ) {
   return lazy(() =>
@@ -101,7 +102,7 @@ export default function App() {
                 <DeliveriesOverview
                   deliveryStatuses={deliveryStatuses}
                   vendedorId={vendedorId!}
-                  onSelectRoute={(route) => {
+                  onSelectRoute={(route: unknown) => {
                     setSelectedRoute(route);
                     navigate("/routes/details");
                   }}
@@ -113,7 +114,7 @@ export default function App() {
               path="/routes"
               element={
                 <RoutesScreen
-                  onSelectRoute={(route) => {
+                  onSelectRoute={(route: unknown) => {
                     setSelectedRoute(route);
                     navigate("/routes/details");
                   }}
@@ -138,11 +139,11 @@ export default function App() {
                       navigate("/routes");
                     }
                   }}
-                  onCheckIn={(delivery) => {
+                  onCheckIn={(delivery: Delivery) => {
                     setSelectedDelivery(delivery);
                     navigate("/checkin");
                   }}
-                  onOpenPDV={(delivery) => {
+                  onOpenPDV={(delivery: Delivery) => {
                     setSelectedDelivery(delivery);
                     navigate("/pdv/delivery");
                   }}
@@ -156,7 +157,7 @@ export default function App() {
                 <CheckInScreen
                   delivery={selectedDelivery}
                   onBack={() => navigate("/routes/details")}
-                  onCheckInComplete={(delivery, status, hadSale) => {
+                  onCheckInComplete={(delivery: Delivery, status: CheckInStatus, hadSale: boolean) => {
                     // Update delivery status
                     updateDeliveryStatus(delivery.id, {
                       checkInStatus: status,
@@ -180,7 +181,7 @@ export default function App() {
                 <CustomerList
                   onAddCustomer={() => navigate("/customers/new")}
                   onViewContracts={() => navigate("/contracts")}
-                  onViewHistory={(customer) => {
+                  onViewHistory={(customer: unknown) => {
                     setSelectedCustomer(customer);
                     navigate("/customers/history");
                   }}
@@ -233,7 +234,7 @@ export default function App() {
               path="/dashboard"
               element={
                 <Dashboard
-                  onSelectDelivery={(delivery) => {
+                  onSelectDelivery={(delivery: Delivery) => {
                     setSelectedDelivery(delivery);
                     navigate("/checkin");
                   }}
