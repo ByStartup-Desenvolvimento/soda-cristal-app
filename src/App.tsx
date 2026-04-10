@@ -21,16 +21,21 @@ const RouteDetails = lazy(() => import("./presentation/pages/RouteDetails").then
 const DeliveriesOverview = lazy(() => import("./presentation/pages/DeliveriesOverview").then(m => ({ default: m.DeliveriesOverview })));
 
 export default function App() {
-  const { isLoggedIn, initialzedAuth, isInitialized, vendedorId } = useUserStore();
-  const { setSelectedCustomer, selectedCustomer } = useUiStore();
-  const {
-    selectedDelivery,
-    selectedRoute,
-    deliveryStatuses,
-    setSelectedDelivery,
-    setSelectedRoute,
-    updateDeliveryStatus
-  } = useDeliveryStore();
+  // Seletores granulares evitam re-renders do componente raiz por mudanças irrelevantes
+  const isLoggedIn = useUserStore(s => s.isLoggedIn);
+  const initialzedAuth = useUserStore(s => s.initialzedAuth);
+  const isInitialized = useUserStore(s => s.isInitialized);
+  const vendedorId = useUserStore(s => s.vendedorId);
+
+  const selectedCustomer = useUiStore(s => s.selectedCustomer);
+  const setSelectedCustomer = useUiStore(s => s.setSelectedCustomer);
+
+  const selectedDelivery = useDeliveryStore(s => s.selectedDelivery);
+  const selectedRoute = useDeliveryStore(s => s.selectedRoute);
+  const deliveryStatuses = useDeliveryStore(s => s.deliveryStatuses);
+  const setSelectedDelivery = useDeliveryStore(s => s.setSelectedDelivery);
+  const setSelectedRoute = useDeliveryStore(s => s.setSelectedRoute);
+  const updateDeliveryStatus = useDeliveryStore(s => s.updateDeliveryStatus);
 
   const navigate = useNavigate();
 

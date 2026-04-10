@@ -48,7 +48,7 @@ export const useRotasStore = create<RotasState>()(
 
     // Carregar rotas do vendedor
     loadRotas: async (vendedorId: number, forceRefresh = false) => {
-        const CACHE_MINUTES = 15;
+        const CACHE_MINUTES = 480; // 8h — rotas mudam ~1x/mês, cache agressivo para economizar rede
         const STALE_HOURS = 8;
         const now = Date.now();
         const state = get();
@@ -85,7 +85,7 @@ export const useRotasStore = create<RotasState>()(
 
     // Carregar as rotas do dia de hoje e acumular todos os clientes
     loadTodaysRoutes: async (vendedorId: number, forceRefresh = false) => {
-        const CACHE_MINUTES = 15;
+        const CACHE_MINUTES = 480; // 8h — clientes mudam ~1x/mês, cache agressivo para economizar rede
         const STALE_HOURS = 8;
         const now = Date.now();
         const state = get();
@@ -120,8 +120,9 @@ export const useRotasStore = create<RotasState>()(
             }
 
             // Busca clientes usando batching para evitar rate limit (429)
-            const BATCH_SIZE = 2;
-            const DELAY_MS = 150;
+            // Com < 10 rotas/dia, BATCH_SIZE=5 reduz de 5 batches para no máximo 2
+            const BATCH_SIZE = 5;
+            const DELAY_MS = 50; // Reduzido de 150ms — só manter se o backend retornar 429
             const results = [];
             
             for (let i = 0; i < todaysRoutes.length; i += BATCH_SIZE) {
@@ -171,8 +172,8 @@ export const useRotasStore = create<RotasState>()(
 
         set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: idsToLoad.length } });
 
-        const BATCH_SIZE = 2; 
-        const DELAY_MS = 150;
+        const BATCH_SIZE = 5; // Com < 10 rotas/dia, reduz de 5 batches para no máximo 2
+        const DELAY_MS = 50; // Reduzido de 150ms — só manter se o backend retornar 429
         const accumulated: Record<number, RotaEntregaCompleta[]> = { ...existing };
 
         try {
