@@ -6,6 +6,8 @@ import { useRotasStore } from '../rotas/rotasStore';
 import { useDeliveryStore } from '../deliveries/deliveryStore';
 import { useOutboxStore } from '../sync/outboxStore';
 import { useSyncStore } from '../sync/syncStore';
+import { abortDataFetching, resetDataController } from '../../shared/api/fetchController';
+import { isNetworkError } from '../../shared/api/networkUtils';
 
 const AUTH_STORAGE_KEYS = ['auth_token', 'vendedorId', 'distribuidorId', 'user', 'soda-delivery-storage', 'soda-rotas-storage'] as const;
 
@@ -67,6 +69,8 @@ export const useUserStore = create<UserState>((set) => ({
     },
 
     login: async (credentials) => {
+        abortDataFetching();
+
         set({ isLoading: true, error: null });
         try {
             const response = await userService.login(credentials);
@@ -80,6 +84,8 @@ export const useUserStore = create<UserState>((set) => ({
             localStorage.setItem('distribuidorId', response.distribuidor.id.toString());
             localStorage.setItem('user', JSON.stringify(response.user));
 
+            resetDataController();
+
             set({
                 isLoggedIn: true,
                 user: response.user,
@@ -88,10 +94,24 @@ export const useUserStore = create<UserState>((set) => ({
                 isLoading: false,
             });
         } catch (error: unknown) {
+            resetDataController();
             console.error('Login failed', error);
-            const err = error as { response?: { data?: { message?: string } }; message?: string };
+
+            const err = error as { response?: { data?: { message?: string }; status?: number }; message?: string; code?: string };
+
+            let userMessage: string;
+            if (isNetworkError(error)) {
+                userMessage = 'Servidor indisponível. Verifique sua conexão e tente novamente.';
+            } else if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+                userMessage = 'O servidor demorou para responder. Tente novamente em instantes.';
+            } else if (err.response?.status === 401) {
+                userMessage = 'Usuário ou senha inválidos.';
+            } else {
+                userMessage = err.response?.data?.message || 'Falha ao realizar login. Tente novamente.';
+            }
+
             set({
-                error: err.response?.data?.message || err.message || 'Falha ao realizar login',
+                error: userMessage,
                 isLoading: false,
                 isLoggedIn: false
             });

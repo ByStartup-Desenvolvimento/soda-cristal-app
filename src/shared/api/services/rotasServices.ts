@@ -14,16 +14,16 @@ export const rotasApiService = {
 
     /**
      * GET /rotas-entregas
-     * Retorna todos os clientes de todas as rotas (sincronização completa)
+     * Retorna clientes de TODAS as rotas do vendedor em uma única chamada (bulk).
      */
-    fetchRotasEntregas: async (): Promise<RotaEntregaCompleta[]> => {
-        const response = await api.get<RotaEntregaCompleta[]>(ENDPOINTS.rotasEntregas);
+    fetchRotasEntregasBulk: async (): Promise<RotaEntregaCompleta[]> => {
+        const response = await api.get<RotaEntregaCompleta[]>(ENDPOINTS.ROTAS_ENTREGAS_BULK);
         return response.data;
     },
 
     /**
      * GET /rotas-entregas/rota/{rota_id}
-     * Retorna clientes de uma rota específica
+     * Retorna clientes de uma rota específica (usada sob demanda para 1 rota).
      */
     fetchRotasEntregasPorRota: async (rotaId: number): Promise<RotaEntregaCompleta[]> => {
         const response = await api.get<RotaEntregaCompleta[]>(

@@ -34,37 +34,24 @@ export const rotasService = {
     },
 
     /**
-     * Busca as rotas do vendedor que correspondem ao dia de hoje
-     * Suporta frequências compostas como "Quarta-Feira e Sábado"
-     * Suporta também ranges como "Seg a sexta" ou "Segunda a sábado"
+     * Filtra rotas pelo dia de hoje (função pura, sem fetch).
+     * Suporta frequências compostas e ranges.
      */
-    async getTodaysRoutes(vendedorId: number): Promise<Rota[]> {
-        const allRoutes = await this.getRotasVendedor(vendedorId);
-        const dayIndex = new Date().getDay(); // 0 a 6 (Domingo a Sábado)
+    filterByToday(rotas: Rota[]): Rota[] {
+        const dayIndex = new Date().getDay();
         const today = this.getTodayWeekday();
 
-        return allRoutes.filter(r => {
+        return rotas.filter(r => {
             const freq = r.frequencia?.toLowerCase() || '';
 
-            // Se for string de intervalo "Seg a Sexta" ou similar (1 a 5)
-            // ex: "Seg a sexta", "Segunda a Sexta-feira", etc.
             if (freq.includes('seg') && freq.includes('a') && (freq.includes('sex') || freq.includes('sexta'))) {
-                // Se hoje é segunda(1), terça(2), quarta(3), quinta(4) ou sexta(5)
-                if (dayIndex >= 1 && dayIndex <= 5) {
-                    return true;
-                }
+                if (dayIndex >= 1 && dayIndex <= 5) return true;
             }
 
-            // Se for string de intervalo "Segunda a Sábado" (1 a 6)
             if (freq.includes('seg') && freq.includes('a') && (freq.includes('sab') || freq.includes('sáb') || freq.includes('sábado'))) {
-                // Se hoje é segunda(1) a sábado(6)
-                if (dayIndex >= 1 && dayIndex <= 6) {
-                    return true;
-                }
+                if (dayIndex >= 1 && dayIndex <= 6) return true;
             }
 
-            // Fallback: suporta nomes completos ("Sexta-Feira") e curtos ("Sexta")
-            // Ex: "Terça e Sexta", "Quarta-Feira", "Segunda, Quarta e Sexta-Feira"
             const todayLower = today.toLowerCase();
             const todayShort = todayLower.split('-')[0];
             return freq.includes(todayLower) || freq.includes(todayShort);
@@ -72,18 +59,46 @@ export const rotasService = {
     },
 
     /**
-     * Busca todos os clientes de todas as rotas (sincronização completa)
+     * Busca as rotas do dia. Se já houver rotas em memória, filtra localmente
+     * (zero requests). Caso contrário, faz fetch e filtra.
      */
-    async getRotasEntregasCompletas(): Promise<RotaEntregaCompleta[]> {
-        return await rotasApiService.fetchRotasEntregas();
+    async getTodaysRoutes(vendedorId: number, cachedRotas?: Rota[]): Promise<Rota[]> {
+        const allRoutes = cachedRotas && cachedRotas.length > 0
+            ? cachedRotas
+            : await this.getRotasVendedor(vendedorId);
+
+        return this.filterByToday(allRoutes);
     },
 
     /**
-     * Busca clientes de uma rota específica
+     * Busca clientes de múltiplas rotas sequencialmente (1 por vez) para evitar
+     * congestionamento de rede. Retorna lista flat + mapa agrupado por rota.
+     */
+    async getClientesParaRotas(rotaIds: number[]): Promise<{
+        flat: RotaEntregaCompleta[];
+        porRota: Record<number, RotaEntregaCompleta[]>;
+    }> {
+        const porRota: Record<number, RotaEntregaCompleta[]> = {};
+
+        for (const id of rotaIds) {
+            const clientes = await rotasApiService.fetchRotasEntregasPorRota(id);
+            porRota[id] = clientes.sort(
+                (a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia
+            );
+        }
+
+        const flat = Object.values(porRota)
+            .flat()
+            .sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
+
+        return { flat, porRota };
+    },
+
+    /**
+     * Busca clientes de uma rota específica (chamada individual, usada sob demanda)
      */
     async getClientesPorRota(rotaId: number): Promise<RotaEntregaCompleta[]> {
         const clientes = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
-        // Ordenar por sequência
         return clientes.sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
     },
 

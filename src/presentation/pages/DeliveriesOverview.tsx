@@ -6,6 +6,7 @@ import { Button } from '../../shared/ui/button';
 import { CheckCircle, MapPin, Calendar, AlertCircle, RefreshCw, Route, Loader2 } from 'lucide-react';
 import { useRotasStore } from '../../domain/rotas/rotasStore';
 import { useNetworkStore } from '../../shared/store/networkStore';
+import { useSyncStore } from '../../domain/sync/syncStore';
 import { OfflineDataBanner } from '../components/OfflineDataBanner';
 import { DeliveryStatusData } from '../../domain/deliveries/models';
 import { useMemo } from 'react';
@@ -33,10 +34,15 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId
   } = useRotasStore();
   const isOnline = useNetworkStore(s => s.isOnline);
 
+  const isSyncing = useSyncStore(s => s.isSyncing);
+
   useEffect(() => {
     if (!hasHydratedFromStorage) return;
+    if (isSyncing) return;
+    if (isLoading) return;
+    if (clientesRota.length > 0) return;
     loadTodaysRoutes(vendedorId);
-  }, [vendedorId, loadTodaysRoutes, hasHydratedFromStorage]);
+  }, [vendedorId, loadTodaysRoutes, hasHydratedFromStorage, isSyncing, isLoading, clientesRota.length]);
 
   const showOfflineBanner =
     Boolean(offlineModeHint) ||
