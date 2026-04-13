@@ -193,10 +193,17 @@ export const useRotasStore = create<RotasState>()(
                 set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: rotaIds.length } });
             }
 
-            const { flat: allClientes, porRota } = await rotasService.getClientesParaRotas(rotaIds, (current, total) => {
-                if (shouldShowLoading) {
-                    set({ loadingProgress: { current, total } });
-                }
+            const { flat: allClientes, porRota } = await rotasService.getClientesParaRotas(rotaIds, {
+                concurrency: 3,
+                onProgress: (current, total) => {
+                    if (shouldShowLoading) {
+                        set({ loadingProgress: { current, total } });
+                    }
+                },
+                onRotaLoaded: (rotaId, clientes) => {
+                    const current = get().deliveriesPorRota;
+                    set({ deliveriesPorRota: { ...current, [rotaId]: clientes } });
+                },
             });
 
             set({
@@ -253,16 +260,22 @@ export const useRotasStore = create<RotasState>()(
             return;
         }
 
-        set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: idsToLoad.length } });
+        const alreadyLoaded = rotaIds.length - idsToLoad.length;
+        set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: alreadyLoaded, total: rotaIds.length } });
 
         try {
-            const { porRota } = await rotasService.getClientesParaRotas(idsToLoad, (current, total) => {
-                set({ loadingProgress: { current, total } });
+            await rotasService.getClientesParaRotas(idsToLoad, {
+                concurrency: 3,
+                onProgress: (current) => {
+                    set({ loadingProgress: { current: alreadyLoaded + current, total: rotaIds.length } });
+                },
+                onRotaLoaded: (rotaId, clientes) => {
+                    const current = get().deliveriesPorRota;
+                    set({ deliveriesPorRota: { ...current, [rotaId]: clientes } });
+                },
             });
-            const accumulated = { ...existing, ...porRota };
 
             set({
-                deliveriesPorRota: accumulated,
                 isLoadingDeliveries: false,
                 loadingStep: null,
                 loadingProgress: null,
@@ -274,11 +287,12 @@ export const useRotasStore = create<RotasState>()(
                 return;
             }
             console.error('Erro ao carregar deliveries por rota:', error);
+            const currentExisting = get().deliveriesPorRota;
             set({
                 isLoadingDeliveries: false,
                 loadingStep: null,
                 loadingProgress: null,
-                ...(Object.keys(existing).length > 0
+                ...(Object.keys(currentExisting).length > 0
                     ? { offlineModeHint: OFFLINE_CACHE_MESSAGE, error: null }
                     : {}),
             });

@@ -16,6 +16,7 @@ interface RouteUI extends Rota {
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'in-progress' | 'completed';
   zone: string;
+  isDeliveryLoaded: boolean;
 }
 
 interface RoutesScreenProps {
@@ -51,18 +52,18 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
   const offlineBannerText =
     offlineModeHint ?? 'Sem conexão — exibindo dados salvos';
 
-  // Adapter para converter Rota do domínio para o formato UI
   const mappedRoutes: RouteUI[] = rotas.map(rota => {
     const deliveries = deliveriesPorRota[rota.id] || [];
     const zone = getZoneFromDeliveries(deliveries);
-
+    const isDeliveryLoaded = rota.id in deliveriesPorRota;
 
     return {
       ...rota,
       pendingDeliveries: deliveries.length,
-      status: 'pending', // Forçar todas as rotas como pendentes para liberar o botão de detalhes
+      status: 'pending',
       priority: 'medium',
       zone,
+      isDeliveryLoaded,
     };
   });
 
@@ -239,16 +240,20 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
             <CardContent className="space-y-3">
               {/* Delivery Count */}
               <div className="flex items-center space-x-3 p-3 rounded-lg" style={{ background: 'linear-gradient(135deg, rgba(0, 128, 0, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)' }}>
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md"
-                  style={{ background: 'linear-gradient(135deg, #008000 0%, #00a000 100%)' }}
-                >
-                  {isLoadingDeliveries ? '...' : route.pendingDeliveries}
-                </div>
+                {route.isDeliveryLoaded ? (
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md"
+                    style={{ background: 'linear-gradient(135deg, #008000 0%, #00a000 100%)' }}
+                  >
+                    {route.pendingDeliveries}
+                  </div>
+                ) : (
+                  <Loader2 className="w-5 h-5 text-green-600 animate-spin shrink-0" />
+                )}
                 <span className="text-sm font-medium text-gray-700">
-                  {isLoadingDeliveries
-                    ? 'Carregando entregas...'
-                    : `${route.pendingDeliveries} entregas pendentes`
+                  {route.isDeliveryLoaded
+                    ? `${route.pendingDeliveries} entregas pendentes`
+                    : 'Sincronizando entregas...'
                   }
                 </span>
               </div>

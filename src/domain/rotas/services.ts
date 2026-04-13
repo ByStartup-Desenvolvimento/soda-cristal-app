@@ -71,27 +71,47 @@ export const rotasService = {
     },
 
     /**
-     * Busca clientes de múltiplas rotas sequencialmente (1 por vez) para evitar
-     * congestionamento de rede. Retorna lista flat + mapa agrupado por rota.
+     * Busca clientes de múltiplas rotas em paralelo com limite de concorrência.
+     * Dispara callback `onRotaLoaded` a cada rota concluída para renderização progressiva.
      */
     async getClientesParaRotas(
         rotaIds: number[],
-        onProgress?: (current: number, total: number) => void,
+        options?: {
+            concurrency?: number;
+            onProgress?: (current: number, total: number) => void;
+            onRotaLoaded?: (rotaId: number, clientes: RotaEntregaCompleta[]) => void;
+        },
     ): Promise<{
         flat: RotaEntregaCompleta[];
         porRota: Record<number, RotaEntregaCompleta[]>;
     }> {
+        const { concurrency = 3, onProgress, onRotaLoaded } = options ?? {};
         const porRota: Record<number, RotaEntregaCompleta[]> = {};
         const total = rotaIds.length;
+        let completed = 0;
 
-        for (let i = 0; i < rotaIds.length; i++) {
-            const id = rotaIds[i];
-            const clientes = await rotasApiService.fetchRotasEntregasPorRota(id);
-            porRota[id] = clientes.sort(
+        const loadRota = async (rotaId: number) => {
+            const clientes = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
+            const sorted = clientes.sort(
                 (a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia
             );
-            onProgress?.(i + 1, total);
+            porRota[rotaId] = sorted;
+            completed++;
+            onRotaLoaded?.(rotaId, sorted);
+            onProgress?.(completed, total);
+        };
+
+        const executing: Promise<void>[] = [];
+        for (const rotaId of rotaIds) {
+            const p = loadRota(rotaId).then(() => {
+                executing.splice(executing.indexOf(p), 1);
+            });
+            executing.push(p);
+            if (executing.length >= concurrency) {
+                await Promise.race(executing);
+            }
         }
+        await Promise.all(executing);
 
         const flat = Object.values(porRota)
             .flat()
