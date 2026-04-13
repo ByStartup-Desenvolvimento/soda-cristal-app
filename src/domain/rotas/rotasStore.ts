@@ -92,6 +92,7 @@ export const useRotasStore = create<RotasState>()(
 
         const hasData = state.rotas.length > 0;
         if (!forceRefresh && !isNewDay && validCache && hasData) {
+            if (state.offlineModeHint) set({ offlineModeHint: null });
             return;
         }
 
@@ -150,6 +151,7 @@ export const useRotasStore = create<RotasState>()(
 
         const hasData = state.clientesRota.length > 0;
         if (!forceRefresh && !isNewDay && validCache && hasData) {
+            if (state.offlineModeHint) set({ offlineModeHint: null });
             return;
         }
 

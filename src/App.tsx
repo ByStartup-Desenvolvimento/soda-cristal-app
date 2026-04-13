@@ -101,18 +101,17 @@ export default function App() {
   useEffect(() => {
     if (!isLoggedIn || !vendedorId) return;
 
-    const runFlushAndMaybePull = () => {
-      if (!useNetworkStore.getState().isOnline) return;
-      void flushOutbox();
-      void pullCriticalDataAfterReconnect(vendedorId);
-    };
-
     if (useNetworkStore.getState().isOnline) {
       void flushOutbox();
     }
 
-    const onOnline = () => runFlushAndMaybePull();
-    window.addEventListener("online", onOnline);
+    // Subscrição ao store de rede — funciona em web e nativo (Capacitor)
+    const unsubNetwork = useNetworkStore.subscribe((state, prev) => {
+      if (state.isOnline && !prev.isOnline) {
+        void flushOutbox();
+        void pullCriticalDataAfterReconnect(vendedorId);
+      }
+    });
 
     const onVisibility = () => {
       if (document.visibilityState === "visible" && useNetworkStore.getState().isOnline) {
@@ -122,7 +121,7 @@ export default function App() {
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      window.removeEventListener("online", onOnline);
+      unsubNetwork();
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [isLoggedIn, vendedorId]);
