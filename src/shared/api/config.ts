@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 const isNative = Capacitor.isNativePlatform();
 
 const API_BASE_URL = isNative
-    ? 'https://178.16.140.5/api'
+    ? 'https://app.sodacristal.com.br/api'
     : '/api';
 
 export const API_CONFIG = {

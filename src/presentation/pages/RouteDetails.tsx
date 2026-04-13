@@ -24,7 +24,7 @@ interface FiltrosEstrategicos {
 }
 
 interface Route {
-  id: string;
+  id: string | number;
   nome: string;
   zone: string;
   frequencia: string;
@@ -332,7 +332,7 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
   });
   const [descarteSheetOpen, setDescarteSheetOpen] = useState(false);
   const [deliveryParaDescartar, setDeliveryParaDescartar] = useState<Delivery | null>(null);
-  const { loadClientesRota, clientesRota, isLoading } = useRotasStore();
+  const { loadClientesRota, clientesRota, deliveriesPorRota, isLoading } = useRotasStore();
   const [visibleCount, setVisibleCount] = useState(20);
   const observer = useRef<IntersectionObserver | null>(null);
 
@@ -356,20 +356,29 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
     if (node) observer.current.observe(node);
   }, [isLoading]);
 
+  const numericRotaId = route ? Number(String(route.id).replace(/\D/g, '')) : NaN;
+
   useEffect(() => {
-    if (route && (!route.deliveries || route.deliveries.length === 0)) {
-      loadClientesRota(Number(route.id));
-    }
-  }, [route?.id, route?.deliveries, loadClientesRota]);
+    if (!route) return;
+    if (route.deliveries && route.deliveries.length > 0) return;
+    if (!isNaN(numericRotaId) && deliveriesPorRota[numericRotaId]?.length > 0) return;
+    if (!isNaN(numericRotaId)) loadClientesRota(numericRotaId);
+  }, [numericRotaId, route?.deliveries, loadClientesRota, deliveriesPorRota]);
 
   const deliveries = useMemo(() => {
     if (route?.deliveries && route.deliveries.length > 0) {
       return route.deliveries;
     }
+    const cached = !isNaN(numericRotaId) ? deliveriesPorRota[numericRotaId] : undefined;
+    if (cached && cached.length > 0) {
+      return cached
+        .filter(item => item.cliente.ativo === 1)
+        .map(mapClienteToDelivery);
+    }
     return clientesRota
       .filter(item => item.cliente.ativo === 1)
       .map(mapClienteToDelivery);
-  }, [route?.deliveries, clientesRota]);
+  }, [route?.deliveries, numericRotaId, deliveriesPorRota, clientesRota]);
 
   const filtrosAtivosCount = useMemo(() => {
     return Object.values(filtros).filter(Boolean).length;
@@ -743,25 +752,23 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
         open={editSheetOpen}
         onOpenChange={setEditSheetOpen}
         cliente={clienteParaEditar}
-        onSaved={() => loadClientesRota(Number(route.id))}
+        onSaved={() => { if (!isNaN(numericRotaId)) loadClientesRota(numericRotaId); }}
       />
 
-      {/* Sheet de Desativação de Cliente (R5) */}
       <ClienteDesativarSheet
         open={desativarSheetOpen}
         onOpenChange={setDesativarSheetOpen}
         cliente={clienteParaDesativar}
-        onSaved={() => loadClientesRota(Number(route.id))}
+        onSaved={() => { if (!isNaN(numericRotaId)) loadClientesRota(numericRotaId); }}
       />
 
-      {/* Sheet de Descarte de Check-in */}
       <CheckInDescarteSheet
         open={descarteSheetOpen}
         onOpenChange={setDescarteSheetOpen}
         deliveryId={deliveryParaDescartar?.id || ''}
         clienteId={deliveryParaDescartar?.clienteId || 0}
         customerName={deliveryParaDescartar?.customerName || ''}
-        onDiscarded={() => loadClientesRota(Number(route.id))}
+        onDiscarded={() => { if (!isNaN(numericRotaId)) loadClientesRota(numericRotaId); }}
       />
     </div>
   );

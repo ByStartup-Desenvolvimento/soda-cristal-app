@@ -74,17 +74,23 @@ export const rotasService = {
      * Busca clientes de múltiplas rotas sequencialmente (1 por vez) para evitar
      * congestionamento de rede. Retorna lista flat + mapa agrupado por rota.
      */
-    async getClientesParaRotas(rotaIds: number[]): Promise<{
+    async getClientesParaRotas(
+        rotaIds: number[],
+        onProgress?: (current: number, total: number) => void,
+    ): Promise<{
         flat: RotaEntregaCompleta[];
         porRota: Record<number, RotaEntregaCompleta[]>;
     }> {
         const porRota: Record<number, RotaEntregaCompleta[]> = {};
+        const total = rotaIds.length;
 
-        for (const id of rotaIds) {
+        for (let i = 0; i < rotaIds.length; i++) {
+            const id = rotaIds[i];
             const clientes = await rotasApiService.fetchRotasEntregasPorRota(id);
             porRota[id] = clientes.sort(
                 (a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia
             );
+            onProgress?.(i + 1, total);
         }
 
         const flat = Object.values(porRota)

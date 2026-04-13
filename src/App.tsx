@@ -5,7 +5,7 @@ import { useRotasStore } from "./domain/rotas/rotasStore";
 import { useOutboxStore } from "./domain/sync/outboxStore";
 import { useSyncStore, pullCriticalDataAfterReconnect } from "./domain/sync/syncStore";
 import { flushOutbox } from "./domain/sync/flushOutbox";
-import { syncNetworkFromNavigator, initNetworkListener } from "./shared/store/networkStore";
+import { useNetworkStore, initNetworkListener } from "./shared/store/networkStore";
 import { PendingSyncBanner } from "./presentation/components/PendingSyncBanner";
 import { Toaster } from "./shared/ui/sonner";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
@@ -98,17 +98,16 @@ export default function App() {
     void useSyncStore.getState().runBootstrapIfNeeded(vendedorId);
   }, [isInitialized, isLoggedIn, vendedorId, hasHydratedFromStorage]);
 
-  // Ao voltar online ou focar o app: envia outbox e puxa dados críticos (TTL do rotasStore).
   useEffect(() => {
     if (!isLoggedIn || !vendedorId) return;
 
     const runFlushAndMaybePull = () => {
-      syncNetworkFromNavigator();
+      if (!useNetworkStore.getState().isOnline) return;
       void flushOutbox();
       void pullCriticalDataAfterReconnect(vendedorId);
     };
 
-    if (typeof navigator !== "undefined" && navigator.onLine) {
+    if (useNetworkStore.getState().isOnline) {
       void flushOutbox();
     }
 
@@ -116,8 +115,7 @@ export default function App() {
     window.addEventListener("online", onOnline);
 
     const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        syncNetworkFromNavigator();
+      if (document.visibilityState === "visible" && useNetworkStore.getState().isOnline) {
         void flushOutbox();
       }
     };

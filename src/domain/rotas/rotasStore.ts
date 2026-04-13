@@ -186,20 +186,21 @@ export const useRotasStore = create<RotasState>()(
         try {
             const cachedRotas = get().rotas;
             const todaysRoutes = await rotasService.getTodaysRoutes(vendedorId, cachedRotas);
-            set({ rotasDeHoje: todaysRoutes, offlineModeHint: null });
-
-            if (shouldShowLoading) {
-                set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: 1 } });
-            }
 
             const rotaIds = todaysRoutes.map(r => r.id);
-            const { flat: allClientes, porRota } = await rotasService.getClientesParaRotas(rotaIds);
 
             if (shouldShowLoading) {
-                set({ loadingProgress: { current: 1, total: 1 } });
+                set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: rotaIds.length } });
             }
 
+            const { flat: allClientes, porRota } = await rotasService.getClientesParaRotas(rotaIds, (current, total) => {
+                if (shouldShowLoading) {
+                    set({ loadingProgress: { current, total } });
+                }
+            });
+
             set({
+                rotasDeHoje: todaysRoutes,
                 clientesRota: allClientes,
                 deliveriesPorRota: { ...get().deliveriesPorRota, ...porRota },
                 isLoading: false,
@@ -252,10 +253,12 @@ export const useRotasStore = create<RotasState>()(
             return;
         }
 
-        set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: 1 } });
+        set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: idsToLoad.length } });
 
         try {
-            const { porRota } = await rotasService.getClientesParaRotas(idsToLoad);
+            const { porRota } = await rotasService.getClientesParaRotas(idsToLoad, (current, total) => {
+                set({ loadingProgress: { current, total } });
+            });
             const accumulated = { ...existing, ...porRota };
 
             set({
@@ -294,12 +297,7 @@ export const useRotasStore = create<RotasState>()(
         const cached = get().deliveriesPorRota[rotaId];
         if (!useNetworkStore.getState().isOnline) {
             if (cached && cached.length > 0) {
-                set({
-                    clientesRota: cached,
-                    isLoading: false,
-                    offlineModeHint: OFFLINE_CACHE_MESSAGE,
-                    error: null,
-                });
+                set({ isLoading: false, offlineModeHint: OFFLINE_CACHE_MESSAGE, error: null });
                 return;
             }
             set({
@@ -313,19 +311,19 @@ export const useRotasStore = create<RotasState>()(
         set({ isLoading: true, error: null });
         try {
             const clientes = await rotasService.getClientesPorRota(rotaId);
-            set({ clientesRota: clientes, isLoading: false, offlineModeHint: null, error: null });
+            set({
+                deliveriesPorRota: { ...get().deliveriesPorRota, [rotaId]: clientes },
+                isLoading: false,
+                offlineModeHint: null,
+                error: null,
+            });
         } catch (error: unknown) {
             if (isAbortError(error)) {
                 set({ isLoading: false });
                 return;
             }
             if (cached && cached.length > 0) {
-                set({
-                    clientesRota: cached,
-                    isLoading: false,
-                    error: null,
-                    offlineModeHint: OFFLINE_CACHE_MESSAGE,
-                });
+                set({ isLoading: false, error: null, offlineModeHint: OFFLINE_CACHE_MESSAGE });
                 return;
             }
             const message = error instanceof Error ? error.message : 'Erro ao carregar clientes';

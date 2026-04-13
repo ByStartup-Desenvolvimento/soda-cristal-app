@@ -175,7 +175,7 @@ export function RoutesScreen({ onSelectRoute }: RoutesScreenProps) {
             <div className="flex items-center space-x-3 mb-2">
               <Loader2 className="w-4 h-4 text-green-600 animate-spin" />
               <p className="text-sm text-green-800 font-medium">
-                Sincronizando entregas ({loadingProgress.current} de {loadingProgress.total})
+                Sincronizando entregas ({loadingProgress.current} de {loadingProgress.total} rotas)
               </p>
             </div>
             <div className="h-2 w-full bg-green-100 rounded-full overflow-hidden">

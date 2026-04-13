@@ -59,10 +59,9 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: 'https://178.16.140.5',
+        target: 'https://app.sodacristal.com.br',
         changeOrigin: true,
         secure: false,
-        headers: { Host: 'app.sodacristal.com.br' },
       },
     },
   },
