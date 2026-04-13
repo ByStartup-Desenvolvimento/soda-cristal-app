@@ -10,6 +10,7 @@ const api = axios.create({
     timeout: API_CONFIG.TIMEOUT.DEFAULT,
     headers: {
         'Content-Type': API_CONFIG.HEADERS.CONTENT_TYPE,
+        ...(API_CONFIG.IS_NATIVE && { Host: 'app.sodacristal.com.br' }),
     },
 });
 
