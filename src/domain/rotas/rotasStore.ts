@@ -8,6 +8,65 @@ import { useNetworkStore } from '../../shared/store/networkStore';
 
 export const OFFLINE_CACHE_MESSAGE = 'Sem conexão — exibindo dados salvos';
 
+/**
+ * Deriva clientesRota a partir dos dados persistidos (deliveriesPorRota + rotasDeHoje).
+ * Chamado após rehydration do IDB para reconstruir o estado sem duplicar no storage.
+ */
+export function deriveClientesRota(): void {
+    const state = useRotasStore.getState();
+    if (state.clientesRota.length > 0) return;
+    const hasDeliveries = Object.keys(state.deliveriesPorRota).length > 0;
+    if (state.rotasDeHoje.length === 0 || !hasDeliveries) return;
+
+    const derived = state.rotasDeHoje
+        .flatMap(r => state.deliveriesPorRota[r.id] ?? [])
+        .sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
+    useRotasStore.setState({ clientesRota: derived });
+}
+
+/**
+ * Storage com debounce para evitar OOM durante sync.
+ * Writes rápidos são coalescidos — apenas o último é persistido.
+ * `flushRotasStorage` força a escrita imediata (chamar ao final de cada sync).
+ */
+let _pendingValue: string | null = null;
+let _pendingName: string | null = null;
+let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const DEBOUNCE_MS = 2_000;
+
+function schedulePersist() {
+    if (_debounceTimer) clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => {
+        if (_pendingName !== null && _pendingValue !== null) {
+            void idbSet(_pendingName, _pendingValue);
+            _pendingValue = null;
+        }
+    }, DEBOUNCE_MS);
+}
+
+export async function flushRotasStorage(): Promise<void> {
+    if (_debounceTimer) clearTimeout(_debounceTimer);
+    if (_pendingName !== null && _pendingValue !== null) {
+        await idbSet(_pendingName, _pendingValue);
+        _pendingValue = null;
+    }
+}
+
+const debouncedStorage = {
+    getItem: async (name: string) => (await idbGet(name)) ?? null,
+    setItem: async (name: string, value: string) => {
+        _pendingName = name;
+        _pendingValue = value;
+        schedulePersist();
+    },
+    removeItem: async (name: string) => {
+        if (_debounceTimer) clearTimeout(_debounceTimer);
+        _pendingValue = null;
+        _pendingName = null;
+        await idbDel(name);
+    },
+};
+
 interface RotasState {
     /** Só true após `persist.rehydrate()` (evita fetch antes do cache do IDB). Não persistido. */
     hasHydratedFromStorage: boolean;
@@ -114,6 +173,7 @@ export const useRotasStore = create<RotasState>()(
                 offlineModeHint: null,
                 error: null,
             });
+            await flushRotasStorage();
         } catch (error: unknown) {
             if (isAbortError(error)) {
                 set({ isLoading: false });
@@ -195,16 +255,13 @@ export const useRotasStore = create<RotasState>()(
                 set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: rotaIds.length } });
             }
 
+            const progressInterval = Math.max(1, Math.floor(rotaIds.length / 10));
             const { flat: allClientes, porRota } = await rotasService.getClientesParaRotas(rotaIds, {
                 concurrency: 3,
                 onProgress: (current, total) => {
-                    if (shouldShowLoading) {
+                    if (shouldShowLoading && (current % progressInterval === 0 || current === total)) {
                         set({ loadingProgress: { current, total } });
                     }
-                },
-                onRotaLoaded: (rotaId, clientes) => {
-                    const current = get().deliveriesPorRota;
-                    set({ deliveriesPorRota: { ...current, [rotaId]: clientes } });
                 },
             });
 
@@ -220,6 +277,7 @@ export const useRotasStore = create<RotasState>()(
                 offlineModeHint: null,
                 error: null,
             });
+            await flushRotasStorage();
         } catch (error: unknown) {
             if (isAbortError(error)) {
                 set({ isLoading: false, loadingStep: null, loadingProgress: null });
@@ -266,23 +324,24 @@ export const useRotasStore = create<RotasState>()(
         set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: alreadyLoaded, total: rotaIds.length } });
 
         try {
-            await rotasService.getClientesParaRotas(idsToLoad, {
+            const progressInterval = Math.max(1, Math.floor(idsToLoad.length / 10));
+            const { porRota } = await rotasService.getClientesParaRotas(idsToLoad, {
                 concurrency: 3,
                 onProgress: (current) => {
-                    set({ loadingProgress: { current: alreadyLoaded + current, total: rotaIds.length } });
-                },
-                onRotaLoaded: (rotaId, clientes) => {
-                    const current = get().deliveriesPorRota;
-                    set({ deliveriesPorRota: { ...current, [rotaId]: clientes } });
+                    if (current % progressInterval === 0 || current === idsToLoad.length) {
+                        set({ loadingProgress: { current: alreadyLoaded + current, total: rotaIds.length } });
+                    }
                 },
             });
 
             set({
+                deliveriesPorRota: { ...get().deliveriesPorRota, ...porRota },
                 isLoadingDeliveries: false,
                 loadingStep: null,
                 loadingProgress: null,
                 offlineModeHint: null,
             });
+            await flushRotasStorage();
         } catch (error: unknown) {
             if (isAbortError(error)) {
                 set({ isLoadingDeliveries: false, loadingStep: null, loadingProgress: null });
@@ -298,6 +357,7 @@ export const useRotasStore = create<RotasState>()(
                     ? { offlineModeHint: OFFLINE_CACHE_MESSAGE, error: null }
                     : {}),
             });
+            await flushRotasStorage();
         }
     },
 
@@ -351,15 +411,10 @@ export const useRotasStore = create<RotasState>()(
         }),
         {
             name: 'soda-rotas-storage',
-            storage: createJSONStorage(() => ({
-                getItem: async (name: string) => (await idbGet(name)) ?? null,
-                setItem: async (name: string, value: string) => await idbSet(name, value),
-                removeItem: async (name: string) => await idbDel(name),
-            })),
+            storage: createJSONStorage(() => debouncedStorage),
             partialize: (state) => ({
                 rotas: state.rotas,
                 rotasDeHoje: state.rotasDeHoje,
-                clientesRota: state.clientesRota,
                 deliveriesPorRota: state.deliveriesPorRota,
                 lastFetchTodaysRoutes: state.lastFetchTodaysRoutes,
                 lastFetchRotas: state.lastFetchRotas,

@@ -91,14 +91,19 @@ export const rotasService = {
         let completed = 0;
 
         const loadRota = async (rotaId: number) => {
-            const clientes = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
-            const sorted = clientes.sort(
-                (a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia
-            );
-            porRota[rotaId] = sorted;
-            completed++;
-            onRotaLoaded?.(rotaId, sorted);
-            onProgress?.(completed, total);
+            try {
+                const clientes = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
+                const sorted = clientes.sort(
+                    (a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia
+                );
+                porRota[rotaId] = sorted;
+            } catch (err) {
+                console.error(`[sync] Falha ao carregar rota ${rotaId}:`, err);
+            } finally {
+                completed++;
+                onRotaLoaded?.(rotaId, porRota[rotaId] ?? []);
+                onProgress?.(completed, total);
+            }
         };
 
         const executing: Promise<void>[] = [];

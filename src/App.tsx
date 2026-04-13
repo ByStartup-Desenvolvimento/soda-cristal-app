@@ -1,7 +1,7 @@
 import { useUserStore } from "./domain/auth/userStore";
 import { useUiStore } from "./shared/store/uiStore";
 import { useDeliveryStore } from "./domain/deliveries/deliveryStore";
-import { useRotasStore } from "./domain/rotas/rotasStore";
+import { useRotasStore, deriveClientesRota } from "./domain/rotas/rotasStore";
 import { useOutboxStore } from "./domain/sync/outboxStore";
 import { useSyncStore, pullCriticalDataAfterReconnect } from "./domain/sync/syncStore";
 import { flushOutbox } from "./domain/sync/flushOutbox";
@@ -85,7 +85,10 @@ export default function App() {
       useSyncStore.persist.rehydrate(),
       useDeliveryStore.persist.rehydrate(),
     ]).then(() => {
-      if (!cancelled) setHasHydratedFromStorage(true);
+      if (!cancelled) {
+        deriveClientesRota();
+        setHasHydratedFromStorage(true);
+      }
     });
     return () => {
       cancelled = true;
