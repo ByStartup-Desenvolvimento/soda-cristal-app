@@ -1,24 +1,32 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 import { API_CONFIG } from './config';
-import { isNetworkError } from './networkUtils';
+import { isNetworkError, isAbortError } from './networkUtils';
+import { getDataSignal } from './fetchController';
+import { ENDPOINTS } from './endpoints';
 
 const api = axios.create({
     baseURL: API_CONFIG.BASE_URL,
+    timeout: API_CONFIG.TIMEOUT.DEFAULT,
     headers: {
         'Content-Type': API_CONFIG.HEADERS.CONTENT_TYPE,
     },
 });
 
+const LOGIN_PATH = ENDPOINTS.LOGIN;
+
 api.interceptors.request.use(
     (config) => {
-        // Adiciona o header de versão do app (obrigatório)
         config.headers['versaoApp'] = API_CONFIG.APP_VERSION;
 
-        // Recupera o token do localStorage (se existir)
-        const token = localStorage.getItem('auth_token'); // TODO: Ajustar chave do token conforme padrão do projeto
+        const token = localStorage.getItem('auth_token');
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const isLoginCall = config.url === LOGIN_PATH;
+        if (!isLoginCall && !config.signal) {
+            config.signal = getDataSignal();
         }
 
         return config;
@@ -31,12 +39,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Sem resposta HTTP: não tratar como sessão inválida
+        if (isAbortError(error)) return Promise.reject(error);
+
         if (isNetworkError(error)) {
             return Promise.reject(error);
         }
 
-        // Se receber 401 (Unauthorized), o token pode ter expirado ou usuário inativo
         if (error.response?.status === 401) {
             const mensagemErro = error.response?.data?.message || 'Sua sessão expirou.';
 

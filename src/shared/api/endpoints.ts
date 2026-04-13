@@ -5,7 +5,7 @@ export const ENDPOINTS = {
 
     // Rotas e Clientes
     rotasVendedor: (vendedorId: number) => `/rotas/${vendedorId}`,
-    rotasEntregas: '/rotas-entregas',
+    ROTAS_ENTREGAS_BULK: '/rotas-entregas',
     rotasEntregasRota: (rotaId: number) => `/rotas-entregas/rota/${rotaId}`,
     clientesXarope: (distribuidorId: number) => `/clientes/xarope/${distribuidorId}`,
 

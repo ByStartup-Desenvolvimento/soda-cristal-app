@@ -27,6 +27,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/:path*", "destination": "https://178.16.140.5/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

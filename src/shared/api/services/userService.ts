@@ -1,8 +1,9 @@
 import api from '../index';
 import { ENDPOINTS } from '../endpoints';
+import { API_CONFIG } from '../config';
+import { isNetworkError } from '../networkUtils';
 import type { User } from '../../../domain/auth/models';
 
-// Tipagem básica para request/response de login
 export interface LoginRequest {
     username: string;
     password: string;
@@ -19,11 +20,36 @@ export interface LoginResponse {
     };
 }
 
+const LOGIN_MAX_RETRIES = 2;
+const LOGIN_BASE_DELAY_MS = 2_000;
+
+async function loginWithRetry(credentials: LoginRequest): Promise<LoginResponse> {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= LOGIN_MAX_RETRIES; attempt++) {
+        try {
+            const response = await api.post<LoginResponse>(ENDPOINTS.LOGIN, credentials, {
+                timeout: API_CONFIG.TIMEOUT.LOGIN,
+            });
+            return response.data;
+        } catch (error) {
+            lastError = error;
+
+            const isLastAttempt = attempt === LOGIN_MAX_RETRIES;
+            if (isLastAttempt || !isNetworkError(error)) throw error;
+
+            const delay = LOGIN_BASE_DELAY_MS * Math.pow(2, attempt);
+            console.warn(`Login tentativa ${attempt + 1} falhou (rede). Retentando em ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    throw lastError;
+}
+
 export const userService = {
     login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-        const response = await api.post<LoginResponse>(ENDPOINTS.LOGIN, credentials);
-
-        return response.data;
+        return loginWithRetry(credentials);
     },
     getCurrentUser: async (): Promise<User> => {
         // Pega os dados do localStorage

@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import type { Rota, RotaEntregaCompleta } from './models';
 import { rotasService } from './services';
-import { isNetworkError } from '../../shared/api/networkUtils';
+import { isNetworkError, isAbortError } from '../../shared/api/networkUtils';
 import { useNetworkStore } from '../../shared/store/networkStore';
 
 export const OFFLINE_CACHE_MESSAGE = 'Sem conexão — exibindo dados salvos';
@@ -115,6 +115,10 @@ export const useRotasStore = create<RotasState>()(
                 error: null,
             });
         } catch (error: unknown) {
+            if (isAbortError(error)) {
+                set({ isLoading: false });
+                return;
+            }
             const state = get();
             if (isNetworkError(error) && state.rotas.length > 0) {
                 set({
@@ -183,42 +187,24 @@ export const useRotasStore = create<RotasState>()(
         }
 
         try {
-            const todaysRoutes = await rotasService.getTodaysRoutes(vendedorId);
+            const cachedRotas = get().rotas;
+            const todaysRoutes = await rotasService.getTodaysRoutes(vendedorId, cachedRotas);
             set({ rotasDeHoje: todaysRoutes, offlineModeHint: null });
 
             if (shouldShowLoading) {
-                set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: todaysRoutes.length } });
+                set({ loadingStep: 'clientes', loadingProgress: { current: 0, total: 1 } });
             }
 
-            // Busca clientes usando batching para evitar rate limit (429)
-            // Com < 10 rotas/dia, BATCH_SIZE=5 reduz de 5 batches para no máximo 2
-            const BATCH_SIZE = 5;
-            const DELAY_MS = 50; // Reduzido de 150ms — só manter se o backend retornar 429
-            const results = [];
-            
-            for (let i = 0; i < todaysRoutes.length; i += BATCH_SIZE) {
-                const batch = todaysRoutes.slice(i, i + BATCH_SIZE);
-                const batchResults = await Promise.all(
-                    batch.map(r => rotasService.getClientesPorRota(r.id))
-                );
-                results.push(...batchResults);
-                
-                if (shouldShowLoading) {
-                    set({ loadingProgress: { current: Math.min(i + BATCH_SIZE, todaysRoutes.length), total: todaysRoutes.length } });
-                }
-                
-                if (i + BATCH_SIZE < todaysRoutes.length) {
-                    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
-                }
-            }
+            const rotaIds = todaysRoutes.map(r => r.id);
+            const { flat: allClientes, porRota } = await rotasService.getClientesParaRotas(rotaIds);
 
-            // Achata e reordena por sequência
-            const allClientes = results
-                .flat()
-                .sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
+            if (shouldShowLoading) {
+                set({ loadingProgress: { current: 1, total: 1 } });
+            }
 
             set({ 
-                clientesRota: allClientes, 
+                clientesRota: allClientes,
+                deliveriesPorRota: { ...get().deliveriesPorRota, ...porRota },
                 isLoading: false, 
                 loadingStep: null, 
                 loadingProgress: null, 
@@ -228,6 +214,10 @@ export const useRotasStore = create<RotasState>()(
                 error: null,
             });
         } catch (error: unknown) {
+            if (isAbortError(error)) {
+                set({ isLoading: false, loadingStep: null, loadingProgress: null });
+                return;
+            }
             const state = get();
             const hasCache =
                 state.clientesRota.length > 0 || state.rotasDeHoje.length > 0;
@@ -246,13 +236,11 @@ export const useRotasStore = create<RotasState>()(
         }
     },
 
-    // Carregar deliveries de múltiplas rotas com batching sequencial (evita 429)
     loadDeliveriesPorRotas: async (rotaIds: number[]) => {
         const state = get();
         if (!state.hasHydratedFromStorage) return;
-        if (state.isLoadingDeliveries) return; // Evita dupla execução (React StrictMode)
+        if (state.isLoadingDeliveries) return;
 
-        // Evita recarregar se já temos dados
         const existing = state.deliveriesPorRota;
         const idsToLoad = rotaIds.filter(id => !existing[id]);
         if (idsToLoad.length === 0) return;
@@ -267,50 +255,27 @@ export const useRotasStore = create<RotasState>()(
             return;
         }
 
-        set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: idsToLoad.length } });
-
-        const BATCH_SIZE = 5; // Com < 10 rotas/dia, reduz de 5 batches para no máximo 2
-        const DELAY_MS = 50; // Reduzido de 150ms — só manter se o backend retornar 429
-        const accumulated: Record<number, RotaEntregaCompleta[]> = { ...existing };
+        set({ isLoadingDeliveries: true, loadingStep: 'clientes', loadingProgress: { current: 0, total: 1 } });
 
         try {
-            for (let i = 0; i < idsToLoad.length; i += BATCH_SIZE) {
-                const batch = idsToLoad.slice(i, i + BATCH_SIZE);
-
-                const results = await Promise.all(
-                    batch.map(async (rotaId) => {
-                        const clientes = await rotasService.getClientesPorRota(rotaId);
-                        return { rotaId, clientes };
-                    })
-                );
-
-                for (const { rotaId, clientes } of results) {
-                    accumulated[rotaId] = clientes;
-                }
-
-                // Atualiza incrementalmente para a UI ir aparecendo
-                set({ 
-                    deliveriesPorRota: { ...accumulated },
-                    loadingProgress: { current: Math.min(i + BATCH_SIZE, idsToLoad.length), total: idsToLoad.length }
-                });
-
-                // Aguarda antes do próximo batch (exceto no último)
-                if (i + BATCH_SIZE < idsToLoad.length) {
-                    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
-                }
-            }
+            const { porRota } = await rotasService.getClientesParaRotas(idsToLoad);
+            const accumulated = { ...existing, ...porRota };
 
             set({
+                deliveriesPorRota: accumulated,
                 isLoadingDeliveries: false,
                 loadingStep: null,
                 loadingProgress: null,
                 offlineModeHint: null,
             });
         } catch (error: unknown) {
+            if (isAbortError(error)) {
+                set({ isLoadingDeliveries: false, loadingStep: null, loadingProgress: null });
+                return;
+            }
             console.error('Erro ao carregar deliveries por rota:', error);
-            const hasPartial = Object.keys(accumulated).length > 0;
+            const hasPartial = Object.keys(existing).length > 0;
             set({
-                deliveriesPorRota: { ...accumulated },
                 isLoadingDeliveries: false,
                 loadingStep: null,
                 loadingProgress: null,
@@ -355,6 +320,10 @@ export const useRotasStore = create<RotasState>()(
             const clientes = await rotasService.getClientesPorRota(rotaId);
             set({ clientesRota: clientes, isLoading: false, offlineModeHint: null, error: null });
         } catch (error: unknown) {
+            if (isAbortError(error)) {
+                set({ isLoading: false });
+                return;
+            }
             if (isNetworkError(error) && cached && cached.length > 0) {
                 set({
                     clientesRota: cached,
