@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import { Delivery, DeliveryStatusData } from './models';
 
 interface DeliveryState {
     selectedDelivery: Delivery | null;
-    selectedRoute: any | null; // Route type to be defined strictly later if needed
+    selectedRoute: any | null;
     deliveryStatuses: Record<string, DeliveryStatusData>;
 
     setSelectedDelivery: (delivery: Delivery | null) => void;
@@ -35,9 +36,15 @@ export const useDeliveryStore = create<DeliveryState>()(
         }),
         {
             name: 'soda-delivery-storage',
+            storage: createJSONStorage(() => ({
+                getItem: async (name: string) => (await idbGet(name)) ?? null,
+                setItem: async (name: string, value: string) => await idbSet(name, value),
+                removeItem: async (name: string) => await idbDel(name),
+            })),
             partialize: (state) => ({
                 deliveryStatuses: state.deliveryStatuses,
             }),
+            skipHydration: true,
         }
     )
 );

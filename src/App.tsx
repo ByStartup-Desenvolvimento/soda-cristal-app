@@ -5,7 +5,7 @@ import { useRotasStore } from "./domain/rotas/rotasStore";
 import { useOutboxStore } from "./domain/sync/outboxStore";
 import { useSyncStore, pullCriticalDataAfterReconnect } from "./domain/sync/syncStore";
 import { flushOutbox } from "./domain/sync/flushOutbox";
-import { syncNetworkFromNavigator } from "./shared/store/networkStore";
+import { syncNetworkFromNavigator, initNetworkListener } from "./shared/store/networkStore";
 import { PendingSyncBanner } from "./presentation/components/PendingSyncBanner";
 import { Toaster } from "./shared/ui/sonner";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
@@ -73,7 +73,6 @@ export default function App() {
     }
   }, [initializeAuth, isInitialized]);
 
-  // Hidrata rotas, outbox e sync do IndexedDB após auth; libera loads da API só com rotas reidratadas.
   useEffect(() => {
     if (!isInitialized || !isLoggedIn) {
       setHasHydratedFromStorage(false);
@@ -84,6 +83,7 @@ export default function App() {
       useRotasStore.persist.rehydrate(),
       useOutboxStore.persist.rehydrate(),
       useSyncStore.persist.rehydrate(),
+      useDeliveryStore.persist.rehydrate(),
     ]).then(() => {
       if (!cancelled) setHasHydratedFromStorage(true);
     });
@@ -129,17 +129,11 @@ export default function App() {
     };
   }, [isLoggedIn, vendedorId]);
 
-  // Conectividade: navigator + eventos. Com Capacitor, complemente com @capacitor/network (ver networkStore.ts).
   useEffect(() => {
     if (!isLoggedIn) return;
-    syncNetworkFromNavigator();
-    const onChange = () => syncNetworkFromNavigator();
-    window.addEventListener("online", onChange);
-    window.addEventListener("offline", onChange);
-    return () => {
-      window.removeEventListener("online", onChange);
-      window.removeEventListener("offline", onChange);
-    };
+    let cleanup: (() => void) | undefined;
+    void initNetworkListener().then((fn) => { cleanup = fn; });
+    return () => { cleanup?.(); };
   }, [isLoggedIn]);
 
   useEffect(() => {

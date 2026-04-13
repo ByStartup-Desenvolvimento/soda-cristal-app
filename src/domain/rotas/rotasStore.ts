@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import type { Rota, RotaEntregaCompleta } from './models';
 import { rotasService } from './services';
-import { isNetworkError, isAbortError } from '../../shared/api/networkUtils';
+import { isAbortError } from '../../shared/api/networkUtils';
 import { useNetworkStore } from '../../shared/store/networkStore';
 
 export const OFFLINE_CACHE_MESSAGE = 'Sem conexão — exibindo dados salvos';
@@ -60,13 +60,14 @@ export const useRotasStore = create<RotasState>()(
 
     clearOfflineModeHint: () => set({ offlineModeHint: null }),
 
-    // Carregar rotas do vendedor
     loadRotas: async (vendedorId: number, forceRefresh = false) => {
         if (!get().hasHydratedFromStorage) return;
 
-        if (!useNetworkStore.getState().isOnline) {
-            const s = get();
-            if (s.rotas.length > 0) {
+        const state = get();
+        const isOnline = useNetworkStore.getState().isOnline;
+
+        if (!isOnline) {
+            if (state.rotas.length > 0) {
                 set({ isLoading: false, offlineModeHint: OFFLINE_CACHE_MESSAGE, error: null });
                 return;
             }
@@ -78,19 +79,17 @@ export const useRotasStore = create<RotasState>()(
             return;
         }
 
-        const CACHE_MINUTES = 480; // 8h — rotas mudam ~1x/mês, cache agressivo para economizar rede
+        const CACHE_MINUTES = 480;
         const STALE_HOURS = 8;
         const now = Date.now();
-        const state = get();
         const today = new Date().toISOString().split('T')[0];
-        
+
         const isNewDay = state.lastFetchDate !== today;
         const cacheAge = state.lastFetchRotas ? now - state.lastFetchRotas : Infinity;
 
         const validCache = cacheAge < CACHE_MINUTES * 60 * 1000;
         const staleCache = cacheAge >= CACHE_MINUTES * 60 * 1000 && cacheAge < STALE_HOURS * 60 * 60 * 1000;
 
-        // Se tem cache válido E dados na memória, sai fora pra economizar rede
         const hasData = state.rotas.length > 0;
         if (!forceRefresh && !isNewDay && validCache && hasData) {
             return;
@@ -119,8 +118,8 @@ export const useRotasStore = create<RotasState>()(
                 set({ isLoading: false });
                 return;
             }
-            const state = get();
-            if (isNetworkError(error) && state.rotas.length > 0) {
+            const current = get();
+            if (current.rotas.length > 0) {
                 set({
                     isLoading: false,
                     error: null,
@@ -133,15 +132,15 @@ export const useRotasStore = create<RotasState>()(
         }
     },
 
-    // Carregar as rotas do dia de hoje e acumular todos os clientes
     loadTodaysRoutes: async (vendedorId: number, forceRefresh = false) => {
         if (!get().hasHydratedFromStorage) return;
 
-        const CACHE_MINUTES = 480; // 8h — clientes mudam ~1x/mês, cache agressivo para economizar rede
+        const CACHE_MINUTES = 480;
         const STALE_HOURS = 8;
         const now = Date.now();
         const state = get();
         const today = new Date().toISOString().split('T')[0];
+        const isOnline = useNetworkStore.getState().isOnline;
 
         const isNewDay = state.lastFetchDate !== today;
         const cacheAge = state.lastFetchTodaysRoutes ? now - state.lastFetchTodaysRoutes : Infinity;
@@ -149,17 +148,14 @@ export const useRotasStore = create<RotasState>()(
         const validCache = cacheAge < CACHE_MINUTES * 60 * 1000;
         const staleCache = cacheAge >= CACHE_MINUTES * 60 * 1000 && cacheAge < STALE_HOURS * 60 * 60 * 1000;
 
-        // Se tem cache válido E dados na memória, sai fora pra economizar rede
         const hasData = state.clientesRota.length > 0;
         if (!forceRefresh && !isNewDay && validCache && hasData) {
             return;
         }
 
-        const shouldShowLoading = forceRefresh || isNewDay || !staleCache;
-
-        if (!useNetworkStore.getState().isOnline) {
-            const hasData = state.clientesRota.length > 0 || state.rotasDeHoje.length > 0;
-            if (hasData) {
+        if (!isOnline) {
+            const hasCachedData = state.clientesRota.length > 0 || state.rotasDeHoje.length > 0;
+            if (hasCachedData) {
                 set({
                     isLoading: false,
                     loadingStep: null,
@@ -179,8 +175,9 @@ export const useRotasStore = create<RotasState>()(
             return;
         }
 
+        const shouldShowLoading = forceRefresh || isNewDay || !staleCache;
+
         if (shouldShowLoading) {
-            // Mantém snapshot local até o novo payload chegar (offline / refresh)
             set({ isLoading: true, loadingStep: 'rotas', loadingProgress: null, error: null, offlineModeHint: null });
         } else {
             set({ error: null });
@@ -202,12 +199,12 @@ export const useRotasStore = create<RotasState>()(
                 set({ loadingProgress: { current: 1, total: 1 } });
             }
 
-            set({ 
+            set({
                 clientesRota: allClientes,
                 deliveriesPorRota: { ...get().deliveriesPorRota, ...porRota },
-                isLoading: false, 
-                loadingStep: null, 
-                loadingProgress: null, 
+                isLoading: false,
+                loadingStep: null,
+                loadingProgress: null,
                 lastFetchTodaysRoutes: Date.now(),
                 lastFetchDate: today,
                 offlineModeHint: null,
@@ -218,10 +215,10 @@ export const useRotasStore = create<RotasState>()(
                 set({ isLoading: false, loadingStep: null, loadingProgress: null });
                 return;
             }
-            const state = get();
+            const current = get();
             const hasCache =
-                state.clientesRota.length > 0 || state.rotasDeHoje.length > 0;
-            if (isNetworkError(error) && hasCache) {
+                current.clientesRota.length > 0 || current.rotasDeHoje.length > 0;
+            if (hasCache) {
                 set({
                     isLoading: false,
                     loadingStep: null,
@@ -274,12 +271,11 @@ export const useRotasStore = create<RotasState>()(
                 return;
             }
             console.error('Erro ao carregar deliveries por rota:', error);
-            const hasPartial = Object.keys(existing).length > 0;
             set({
                 isLoadingDeliveries: false,
                 loadingStep: null,
                 loadingProgress: null,
-                ...(isNetworkError(error) && hasPartial
+                ...(Object.keys(existing).length > 0
                     ? { offlineModeHint: OFFLINE_CACHE_MESSAGE, error: null }
                     : {}),
             });
@@ -292,7 +288,6 @@ export const useRotasStore = create<RotasState>()(
         set({ rotaAtual: rota || null });
     },
 
-    // Carregar clientes da rota
     loadClientesRota: async (rotaId: number) => {
         if (!get().hasHydratedFromStorage) return;
 
@@ -324,7 +319,7 @@ export const useRotasStore = create<RotasState>()(
                 set({ isLoading: false });
                 return;
             }
-            if (isNetworkError(error) && cached && cached.length > 0) {
+            if (cached && cached.length > 0) {
                 set({
                     clientesRota: cached,
                     isLoading: false,
