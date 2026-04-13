@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 const isNative = Capacitor.isNativePlatform();
 
 const API_BASE_URL = isNative
-    ? 'http://178.16.140.5/api'
+    ? 'https://178.16.140.5/api'
     : '/api';
 
 export const API_CONFIG = {
