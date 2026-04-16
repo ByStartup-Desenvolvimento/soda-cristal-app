@@ -63,9 +63,9 @@ const BOTTLE_PRODUCTS: Produto[] = [
   {
     id: -2,
     descricao: "Garrafa Vendida",
-    valor_unitario: "28.99",
-    valor_unitario_revenda: "24.25",
-    valor_preco_especial: "23.00",
+    valor_unitario: "19.00",
+    valor_unitario_revenda: "15.00",
+    valor_preco_especial: "15.00",
     ativo: 1,
     categoria: "Sifão",
   },
