@@ -63,6 +63,18 @@ interface DeliveryCardProps {
   clientesRota: RotaEntregaCompleta[];
 }
 
+const TIPO_CLIENTE_BADGE_COLORS: Record<string, string> = {
+  normal: "linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)",
+  revendedor: "linear-gradient(135deg, #6B73A8 0%, #5A6299 100%)",
+  "revendedor-especial": "linear-gradient(135deg, #FF6600 0%, #E55C00 100%)",
+};
+
+const TIPO_CLIENTE_BORDER_COLORS: Record<string, string> = {
+  normal: "rgba(0, 0, 0, 0.1)",
+  revendedor: "#6B73A8",
+  "revendedor-especial": "#FF6600",
+};
+
 const MemoizedDeliveryCard = memo(({ 
   delivery, index, checkInStatus, statusData, route, 
   setDeliveryParaDescartar, setDescarteSheetOpen, setSelectedDelivery, 
@@ -79,7 +91,10 @@ const MemoizedDeliveryCard = memo(({
       style={{
         borderColor: checkInStatus
           ? undefined
-          : (statusData?.checkInStatus ? 'rgba(0, 128, 0, 0.2)' : 'rgba(0, 0, 0, 0.1)')
+          : statusData?.checkInStatus
+            ? "rgba(0, 128, 0, 0.2)"
+            : TIPO_CLIENTE_BORDER_COLORS[delivery.tipoCliente] ||
+              TIPO_CLIENTE_BORDER_COLORS["normal"],
       }}
     >
       <CardHeader className="pb-3">
@@ -94,14 +109,15 @@ const MemoizedDeliveryCard = memo(({
                       statusData?.checkInStatus === 'no-sale' ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' :
                         statusData?.checkInStatus === 'absent-return' ? 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)' :
                           'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)')
-                    : (statusData?.checkInStatus
+                    : statusData?.checkInStatus
                       ? 'linear-gradient(135deg, #008000 0%, #00a000 100%)'
-                      : 'linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)')
+                      : TIPO_CLIENTE_BADGE_COLORS[delivery.tipoCliente] ||
+                        TIPO_CLIENTE_BADGE_COLORS["normal"]
                 }}
               >
                 {index + 1}
               </div>
-              <CardTitle className="text-base font-bold text-gray-800">
+              <CardTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
                 {delivery.customerName}
               </CardTitle>
             </div>
@@ -141,6 +157,22 @@ const MemoizedDeliveryCard = memo(({
               <ShoppingCart className="w-3 h-3 text-yellow-500" />
               <span className="text-xs text-muted-foreground">{delivery.diasSemConsumo ?? 0} dias s/ consumo</span>
             </div>
+            {delivery.tipoCliente === "revendedor" && (
+              <Badge
+                variant="outline"
+                className="bg-[#6B73A8]/10 text-[#6B73A8] border-[#6B73A8]/30 h-5 px-sm text-xs uppercase font-light"
+              >
+                Revenda
+              </Badge>
+            )}
+            {delivery.tipoCliente === "revendedor-especial" && (
+              <Badge
+                variant="outline"
+                className="bg-[#FF6600]/10 text-[#FF6600] border-[#FF6600]/30 h-5 px-sm text-xs uppercase font-light"
+              >
+                Revenda Especial
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -318,7 +350,6 @@ const MemoizedDeliveryCard = memo(({
 
 export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpenPDV }: RouteDetailsProps) {
   const [_selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [clienteParaEditar, setClienteParaEditar] = useState<RotaEntregaCompleta | null>(null);
   const [desativarSheetOpen, setDesativarSheetOpen] = useState(false);
@@ -332,9 +363,14 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
   });
   const [descarteSheetOpen, setDescarteSheetOpen] = useState(false);
   const [deliveryParaDescartar, setDeliveryParaDescartar] = useState<Delivery | null>(null);
-  const { loadClientesRota, clientesRota, deliveriesPorRota, isLoading } = useRotasStore();
+  const { loadClientesRota, clientesRota, deliveriesPorRota, isLoading, searchTermByRoute, setSearchTerm: setStoreSearchTerm } = useRotasStore();
   const [visibleCount, setVisibleCount] = useState(20);
   const observer = useRef<IntersectionObserver | null>(null);
+
+  const numericRotaId = route ? Number(String(route.id).replace(/\D/g, '')) : NaN;
+  const routeKey = String(route?.id ?? '');
+  const searchTerm = searchTermByRoute[routeKey] ?? '';
+  const setSearchTerm = useCallback((term: string) => setStoreSearchTerm(routeKey, term), [routeKey, setStoreSearchTerm]);
 
   // Reset do contador quando muda a rota ou busca/filtros
   useEffect(() => {
@@ -348,15 +384,12 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
 
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting) {
-        // Carrega mais 20 se ainda houver itens para mostrar
         setVisibleCount(prev => prev + 20);
       }
     });
 
     if (node) observer.current.observe(node);
   }, [isLoading]);
-
-  const numericRotaId = route ? Number(String(route.id).replace(/\D/g, '')) : NaN;
 
   useEffect(() => {
     if (!route) return;

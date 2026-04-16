@@ -94,6 +94,8 @@ interface RotasState {
     clearError: () => void;
     clearOfflineModeHint: () => void;
     setHasHydratedFromStorage: (value: boolean) => void;
+    searchTermByRoute: Record<string, string>;
+    setSearchTerm: (routeId: string, term: string) => void;
 }
 
 export const useRotasStore = create<RotasState>()(
@@ -114,6 +116,11 @@ export const useRotasStore = create<RotasState>()(
     lastFetchDate: null,
     loadingStep: null,
     loadingProgress: null,
+    searchTermByRoute: {},
+    setSearchTerm: (routeId: string, term: string) =>
+        set((state) => ({
+            searchTermByRoute: { ...state.searchTermByRoute, [routeId]: term },
+        })),
 
     setHasHydratedFromStorage: (value: boolean) => set({ hasHydratedFromStorage: value }),
 
