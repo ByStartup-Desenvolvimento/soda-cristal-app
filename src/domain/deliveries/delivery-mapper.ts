@@ -1,7 +1,18 @@
-import { RotaEntregaCompleta, PrioridadeCliente } from '../rotas/models';
-import { Delivery } from './models';
+import { RotaEntregaCompleta, PrioridadeCliente, Cliente } from '../rotas/models';
+import { Delivery, TipoCliente } from './models';
 import { rotasService } from '../rotas/services';
 import { formatApiDate } from '@/shared/utils/formatters';
+
+const getTipoCliente = (cliente: Cliente): TipoCliente => {
+  const checkCondicao = (valor: any) => 
+    valor === true || valor === 1 || valor === '1' || valor === 'true';
+  
+  const isRevendedor = checkCondicao(cliente.revendedor_xarope);
+  const isPrecoEspecial = checkCondicao(cliente.xarope_preco_especial);
+  if (isPrecoEspecial) return 'revendedor-especial';
+  if (isRevendedor) return 'revendedor';
+  return 'normal';
+};
 
 export const mapPrioridade = (prioridade: PrioridadeCliente): 'high' | 'medium' | 'low' => {
   switch (prioridade) {
@@ -34,5 +45,6 @@ export const mapClienteToDelivery = (item: RotaEntregaCompleta): Delivery => {
     longitude: item.cliente.longitude,
     diasSemAtendimento: Number(item.diassematendimento) || 0,
     diasSemConsumo: Number(item.diassemconsumo) || 0,
+    tipoCliente: getTipoCliente(item.cliente),
   };
 };

@@ -1,6 +1,8 @@
 
 export type CheckInStatus = 'delivered' | 'no-sale' | 'absent-return' | 'absent-no-return';
 
+export type TipoCliente = 'normal' | 'revendedor' | 'revendedor-especial';
+
 export interface Delivery {
     id: string;
     clienteId: number;
@@ -23,6 +25,7 @@ export interface Delivery {
     longitude?: string;
     diasSemAtendimento?: number;
     diasSemConsumo?: number;
+    tipoCliente: TipoCliente;
 }
 
 export interface DeliveryStatusData {

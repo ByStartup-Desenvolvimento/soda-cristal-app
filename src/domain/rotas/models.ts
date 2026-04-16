@@ -33,7 +33,7 @@ export interface Cliente {
     cf_agua: boolean;
     cf_xarope: boolean;
     precoespecial_agua: boolean;
-    precoespecial_xarope: boolean;
+    xarope_preco_especial: boolean;
     endereco?: string;
     telefone?: number;
 }
