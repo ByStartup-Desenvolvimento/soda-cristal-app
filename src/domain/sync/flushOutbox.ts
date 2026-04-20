@@ -29,7 +29,7 @@ async function sendItem(item: OutboxItem): Promise<void> {
 
     const p = item.payload;
     if (isCheckInPresencaPayload(p)) throw new Error('Payload inválido para CHECK_IN_FULL');
-    await checkInApiService.postCheckIn(p.vendedorId, p.body);
+    await checkInApiService.postCheckInFull(p.vendedorId, [p.body]);
 }
 
 /**
