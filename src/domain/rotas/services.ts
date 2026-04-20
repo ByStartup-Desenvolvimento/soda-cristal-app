@@ -92,7 +92,8 @@ export const rotasService = {
 
         const loadRota = async (rotaId: number) => {
             try {
-                const clientes = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
+                const clientesBrutos = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
+                const clientes = clientesBrutos.filter(c => c.cliente.ativo === 1);
                 const sorted = clientes.sort(
                     (a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia
                 );
@@ -129,8 +130,9 @@ export const rotasService = {
      * Busca clientes de uma rota específica (chamada individual, usada sob demanda)
      */
     async getClientesPorRota(rotaId: number): Promise<RotaEntregaCompleta[]> {
-        const clientes = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
-        return clientes.sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
+        const clientesBrutos = await rotasApiService.fetchRotasEntregasPorRota(rotaId);
+        const clientesAtivos = clientesBrutos.filter(c => c.cliente.ativo === 1);
+        return clientesAtivos.sort((a, b) => a.rotaentrega.sequencia - b.rotaentrega.sequencia);
     },
 
     /**
