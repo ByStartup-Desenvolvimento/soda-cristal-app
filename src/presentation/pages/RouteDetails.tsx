@@ -82,6 +82,9 @@ const MemoizedDeliveryCard = memo(({
   setEditSheetOpen, setClienteParaDesativar, setDesativarSheetOpen, 
   openGPS, clientesRota 
 }: DeliveryCardProps) => {
+  const visualDiasSemAtendimento = statusData?.checkInStatus ? 0 : (delivery.diasSemAtendimento ?? 0);
+  const visualDiasSemConsumo = statusData?.hadSale ? 0 : (delivery.diasSemConsumo ?? 0);
+
   return (
     <Card
       className={`hover:shadow-lg transition-all duration-200 border-2 ${checkInStatus
@@ -151,11 +154,11 @@ const MemoizedDeliveryCard = memo(({
           <div className="flex flex-col space-y-1 items-end mt-1">
             <div className="flex items-center space-x-1" title="Dias sem atendimento">
               <UserX className="w-3 h-3 text-red-400" />
-              <span className="text-xs text-muted-foreground">{delivery.diasSemAtendimento ?? 0} dias s/ atendimento</span>
+              <span className="text-xs text-muted-foreground">{visualDiasSemAtendimento} dias s/ atendimento</span>
             </div>
             <div className="flex items-center space-x-1" title="Dias sem consumo">
               <ShoppingCart className="w-3 h-3 text-yellow-500" />
-              <span className="text-xs text-muted-foreground">{delivery.diasSemConsumo ?? 0} dias s/ consumo</span>
+              <span className="text-xs text-muted-foreground">{visualDiasSemConsumo} dias s/ consumo</span>
             </div>
             {delivery.tipoCliente === "revendedor" && (
               <Badge
