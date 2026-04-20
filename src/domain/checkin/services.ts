@@ -39,7 +39,7 @@ export const checkInService = {
         };
 
         try {
-            await checkInApiService.postCheckIn(request.vendedor, body);
+            await checkInApiService.postCheckInFull(request.vendedor, [body]);
             applyLocalDeliveryStatusFromRequest(request);
             return { sent: true, queued: false };
         } catch (error: unknown) {

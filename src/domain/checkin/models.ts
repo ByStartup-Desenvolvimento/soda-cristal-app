@@ -5,7 +5,7 @@ export type MotivoDescarteLabel = 'Retorno' | 'Erro';
 export interface CheckInRequest {
     rota_entrega: number;
     cliente_id: number;
-    data_checkin: string; // yyyy-MM-dd HH:mm:ss
+    data_checkin: string; // dd/MM/yyyy HH:mm:ss
     vendedor: number;
     observacao: string;
     observacao_descart: string;

@@ -5,7 +5,7 @@ import { AlertCircle, RotateCcw, XCircle } from 'lucide-react';
 import { MotivoDescarteLabel } from '../../domain/checkin/models';
 import { toast } from 'sonner';
 import { checkInService } from '../../domain/checkin/services';
-import { formatApiDate } from '../../shared/utils/formatters';
+import { formatCheckInApiDate } from '../../shared/utils/formatters';
 
 interface CheckInDescarteSheetProps {
     open: boolean;
@@ -33,7 +33,7 @@ export function CheckInDescarteSheet({
             if (!vendedorIdStr) throw new Error('Vendedor não encontrado');
 
             const rotaEntregaId = parseInt(deliveryId.replace('del-', '')) || 0;
-            const nowFormatted = formatApiDate(new Date());
+            const nowFormatted = formatCheckInApiDate(new Date());
 
             await checkInService.descartarCheckIn(
                 parseInt(vendedorIdStr),

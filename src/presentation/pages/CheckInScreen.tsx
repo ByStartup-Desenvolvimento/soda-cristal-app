@@ -5,7 +5,7 @@ import { ArrowLeft, MapPin, CheckCircle, Navigation, Wifi, AlertCircle, Shopping
 import { toast } from 'sonner';
 import { checkInService } from '../../domain/checkin/services';
 import { CheckInStatus } from '../../domain/deliveries/models';
-import { formatApiDate } from '../../shared/utils/formatters';
+import { formatCheckInApiDate } from '../../shared/utils/formatters';
 import { calculateDistance } from '../../shared/utils/location';
 
 
@@ -61,7 +61,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       const vendedorId = parseInt(vendedorIdStr);
       const rotaEntregaId = parseInt(String(delivery.id).replace('del-', '')) || 0;
       const [lat, lng] = currentLocation.split(', ');
-      const nowFormatted = formatApiDate(new Date());
+      const nowFormatted = formatCheckInApiDate(new Date());
 
       // Validação de Geofencing (Raio de 50 metros)
       if (delivery.latitude && delivery.longitude) {
@@ -130,7 +130,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
 
       const [lat, lng] = currentLocation.split(', ');
       const rotaEntregaId = parseInt(String(delivery?.id || '0').replace('del-', '')) || 0;
-      const nowFormatted = formatApiDate(new Date());
+      const nowFormatted = formatCheckInApiDate(new Date());
 
       const statusLabels: Record<string, string> = {
         'delivered': 'Entregue',

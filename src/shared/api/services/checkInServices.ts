@@ -13,11 +13,19 @@ export interface CheckInPayload {
 export const checkInApiService = {
     /**
      * POST /checkin/{vendedor_id}
-     * Realiza check-in (simples ou completo dependendo do payload)
-     * Utiliza o endpoint que aceita um objeto direto (não array)
+     * Realiza check-in simples (presença/anulação) com objeto único.
      */
-    postCheckIn: async (vendedorId: number, data: any): Promise<any> => {
+    postCheckIn: async (vendedorId: number, data: unknown): Promise<unknown> => {
         const response = await api.post(ENDPOINTS.checkin(vendedorId), data);
+        return response.data;
+    },
+
+    /**
+     * POST /checkin/full/{vendedor_id}
+     * Realiza check-in completo de atendimento (payload em array).
+     */
+    postCheckInFull: async (vendedorId: number, data: unknown): Promise<unknown> => {
+        const response = await api.post(ENDPOINTS.checkinFull(vendedorId), data);
         return response.data;
     },
 };
