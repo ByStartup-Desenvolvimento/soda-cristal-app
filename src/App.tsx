@@ -45,6 +45,7 @@ const PDVStandalone = lazyWithChunkRetry(() => import("./presentation/pages/PDVS
 const RoutesScreen = lazyWithChunkRetry(() => import("./presentation/pages/RoutesScreen").then(m => ({ default: m.RoutesScreen })));
 const RouteDetails = lazyWithChunkRetry(() => import("./presentation/pages/RouteDetails").then(m => ({ default: m.RouteDetails })));
 const DeliveriesOverview = lazyWithChunkRetry(() => import("./presentation/pages/DeliveriesOverview").then(m => ({ default: m.DeliveriesOverview })));
+const SendCheckinsPage = lazyWithChunkRetry(() => import("./presentation/pages/SendCheckinsPage").then(m => ({ default: m.SendCheckinsPage })));
 
 export default function App() {
   // Seletores granulares evitam re-renders do componente raiz por mudanças irrelevantes
@@ -236,6 +237,11 @@ export default function App() {
                   }}
                 />
               }
+            />
+
+            <Route
+              path="/checkins/send"
+              element={<SendCheckinsPage onBack={() => navigate('/deliveries')} />}
             />
 
             <Route

@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import { Button } from '../../shared/ui/button';
-import { Home, Users, ShoppingCart, Route, LogOut } from 'lucide-react';
+import { Home, Users, ShoppingCart, Route, Menu } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useUserStore } from '../../domain/auth/userStore';
+import { BottomNavigationActionSheet } from './BottomNavigationActionSheet';
 
 export function BottomNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const logout = useUserStore((state) => state.logout);
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
   const navItems = [
     {
@@ -24,10 +25,10 @@ export function BottomNavigation() {
       preload: () => import('../pages/RoutesScreen')
     },
     {
-      id: 'logout',
-      label: 'Sair',
-      icon: LogOut,
-      onClick: () => logout()
+      id: 'menu',
+      label: 'Menu',
+      icon: Menu,
+      onClick: () => setIsActionSheetOpen(true)
     },
     {
       id: 'customers',
@@ -76,14 +77,11 @@ export function BottomNavigation() {
                 : 'hover:bg-primary/5'
                 }`}>
                 <Icon className={`w-5 h-5 transition-all duration-200 
-                  ${item.id === 'logout'
-                    ? 'text-red-500' : isActive ? 'text-primary' : 'text-black'}
+                  ${isActive ? 'text-primary' : 'text-black'}
                 `} />
               </div>
               <span className={`text-[10px] transition-all duration-200 
-                ${item.id === 'logout'
-                  ? 'text-red-500'
-                  : isActive ? 'text-primary' : 'text-black '}
+                ${isActive ? 'text-primary' : 'text-black '}
                 `}>
                 {item.label}
               </span>
@@ -91,6 +89,10 @@ export function BottomNavigation() {
           );
         })}
       </div>
+      <BottomNavigationActionSheet
+        isOpen={isActionSheetOpen}
+        onOpenChange={setIsActionSheetOpen}
+      />
     </div>
   );
 }

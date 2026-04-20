@@ -8,6 +8,12 @@ let flushInFlight = false;
 
 const MAX_ATTEMPTS = 8;
 
+function getRotaEntregaIdFromItem(item: OutboxItem): number | null {
+    const payload = item.payload;
+    if (isCheckInPresencaPayload(payload)) return payload.rota_entrega;
+    return payload.body.rota_entrega;
+}
+
 async function sendItem(item: OutboxItem): Promise<void> {
     if (item.type === 'CHECK_IN_PRESENCA') {
         const p = item.payload;
@@ -67,4 +73,53 @@ export async function flushOutbox(): Promise<void> {
     } finally {
         flushInFlight = false;
     }
+}
+
+/**
+ * Envia mutações pendentes filtrando por `rota_entrega`.
+ * Útil para o fluxo manual de "Enviar Check-in" por rotas selecionadas.
+ */
+export async function flushOutboxByRotaEntregaIds(rotaEntregaIds: number[]): Promise<number> {
+    if (flushInFlight) return 0;
+    if (rotaEntregaIds.length === 0) return 0;
+
+    const allowedIds = new Set(rotaEntregaIds);
+    let sentCount = 0;
+
+    flushInFlight = true;
+    try {
+        while (true) {
+            const candidate = [...useOutboxStore.getState().items]
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .find((item) => {
+                    const rotaEntregaId = getRotaEntregaIdFromItem(item);
+                    return rotaEntregaId !== null && allowedIds.has(rotaEntregaId);
+                });
+
+            if (!candidate) break;
+
+            try {
+                await sendItem(candidate);
+                useOutboxStore.getState().removeItem(candidate.id);
+                sentCount += 1;
+            } catch (error: unknown) {
+                if (isNetworkError(error)) break;
+
+                const message =
+                    error instanceof Error ? error.message : 'Erro ao enviar mutação';
+                const attempts = candidate.attempts + 1;
+                if (attempts >= MAX_ATTEMPTS) {
+                    useOutboxStore.getState().removeItem(candidate.id);
+                    console.error('[outbox] Descartado após várias falhas:', candidate.id, message);
+                    break;
+                }
+                useOutboxStore.getState().patchItem(candidate.id, { attempts, lastError: message });
+                break;
+            }
+        }
+    } finally {
+        flushInFlight = false;
+    }
+
+    return sentCount;
 }
