@@ -63,24 +63,33 @@ export function BottomNavigationActionSheet({
     toast.info(`${label} será disponibilizado em breve.`);
   }
 
+  // Tempo suficiente para o AlertDialog/Sheet do Radix completarem a animação
+  // de fechamento e removerem o pointer-events/scroll-lock do body antes de
+  // o componente ser desmontado pela troca de isLoggedIn no App.
+  const RADIX_CLOSE_ANIMATION_MS = 250;
+
   function handleLogout(): void {
     if (isLoggingOut) return;
 
     setIsLoggingOut(true);
 
-    try {
-      logout();
-      setIsLogoutConfirmOpen(false);
-      onOpenChange(false);
-      navigate("/login", { replace: true });
-    } catch (error) {
-      console.error("Falha ao encerrar sessão:", error);
-      toast.error("Não foi possível sair", {
-        description: "Tente novamente em instantes.",
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
+    // Fecha overlays ANTES do logout para que o Radix faça o cleanup
+    // do pointer-events/scroll-lock no <body>. Sem isso, o componente é
+    // desmontado enquanto o Dialog ainda está aberto e o body fica travado.
+    setIsLogoutConfirmOpen(false);
+    onOpenChange(false);
+
+    window.setTimeout(() => {
+      try {
+        logout();
+      } catch (error) {
+        console.error("Falha ao encerrar sessão:", error);
+        toast.error("Não foi possível sair", {
+          description: "Tente novamente em instantes.",
+        });
+        setIsLoggingOut(false);
+      }
+    }, RADIX_CLOSE_ANIMATION_MS);
   }
 
   const actions: MenuAction[] = [

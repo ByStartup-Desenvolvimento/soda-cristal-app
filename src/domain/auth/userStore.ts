@@ -15,6 +15,29 @@ function clearAuthStorage() {
     AUTH_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
 }
 
+// Radix (Dialog/Sheet/AlertDialog) aplica pointer-events: none e scroll-lock
+// no <html>/<body> enquanto overlays estão abertos. Se um overlay for
+// desmontado antes do cleanup (ex.: logout desmontando a árvore autenticada
+// via mudança de isLoggedIn no App), esses estilos podem ficar presos e
+// travar toda a UI. Esta função garante a remoção defensiva.
+function releaseRadixBodyLock() {
+    if (typeof document === 'undefined') return;
+
+    const { body, documentElement } = document;
+
+    if (body) {
+        body.style.pointerEvents = '';
+        body.style.overflow = '';
+        body.removeAttribute('data-scroll-locked');
+    }
+
+    if (documentElement) {
+        documentElement.style.pointerEvents = '';
+        documentElement.style.overflow = '';
+        documentElement.removeAttribute('data-scroll-locked');
+    }
+}
+
 interface UserState {
     isLoggedIn: boolean;
     user: User | null;
@@ -159,6 +182,8 @@ export const useUserStore = create<UserState>((set) => ({
         });
 
         clearAuthStorage();
+
+        releaseRadixBodyLock();
 
         void Promise.allSettled([
             useOutboxStore.persist?.clearStorage?.(),
