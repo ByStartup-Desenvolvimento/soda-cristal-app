@@ -63,10 +63,15 @@ export function BottomNavigationActionSheet({
     toast.info(`${label} será disponibilizado em breve.`);
   }
 
-  // Tempo suficiente para o AlertDialog/Sheet do Radix completarem a animação
-  // de fechamento e removerem o pointer-events/scroll-lock do body antes de
-  // o componente ser desmontado pela troca de isLoggedIn no App.
-  const RADIX_CLOSE_ANIMATION_MS = 250;
+  const RADIX_CLOSE_ANIMATION_MS = 300;
+
+  function runAfterRadixClose(callback: () => void): void {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(callback, RADIX_CLOSE_ANIMATION_MS);
+      });
+    });
+  }
 
   function handleLogout(): void {
     if (isLoggingOut) return;
@@ -79,7 +84,7 @@ export function BottomNavigationActionSheet({
     setIsLogoutConfirmOpen(false);
     onOpenChange(false);
 
-    window.setTimeout(() => {
+    runAfterRadixClose(() => {
       try {
         logout();
       } catch (error) {
@@ -89,7 +94,7 @@ export function BottomNavigationActionSheet({
         });
         setIsLoggingOut(false);
       }
-    }, RADIX_CLOSE_ANIMATION_MS);
+    });
   }
 
   const actions: MenuAction[] = [

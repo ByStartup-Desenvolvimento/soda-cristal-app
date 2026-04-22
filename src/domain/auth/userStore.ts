@@ -25,17 +25,38 @@ function releaseRadixBodyLock() {
 
     const { body, documentElement } = document;
 
+    const clearElementLocks = (element: HTMLElement | null) => {
+        if (!element) return;
+        element.style.pointerEvents = '';
+        element.style.overflow = '';
+        element.style.touchAction = '';
+        element.removeAttribute('data-scroll-locked');
+        element.removeAttribute('aria-hidden');
+        element.removeAttribute('inert');
+    };
+
+    clearElementLocks(body);
+    clearElementLocks(documentElement);
+
+    const radixPortals = Array.from(document.querySelectorAll<HTMLElement>('[data-radix-portal]'));
+    radixPortals.forEach((portal) => {
+        portal.style.pointerEvents = '';
+        portal.removeAttribute('aria-hidden');
+        if (!portal.hasChildNodes()) portal.remove();
+    });
+
+    const appRoots = Array.from(document.querySelectorAll<HTMLElement>('#root, [data-react-root], [data-app-root]'));
+    appRoots.forEach((root) => {
+        root.style.pointerEvents = '';
+        root.removeAttribute('aria-hidden');
+        root.removeAttribute('inert');
+    });
+
     if (body) {
-        body.style.pointerEvents = '';
-        body.style.overflow = '';
-        body.removeAttribute('data-scroll-locked');
+        body.classList.remove('overflow-hidden');
     }
 
-    if (documentElement) {
-        documentElement.style.pointerEvents = '';
-        documentElement.style.overflow = '';
-        documentElement.removeAttribute('data-scroll-locked');
-    }
+    if (documentElement) documentElement.classList.remove('overflow-hidden');
 }
 
 interface UserState {
@@ -144,6 +165,8 @@ export const useUserStore = create<UserState>((set) => ({
 
     logout: () => {
         // O logout deve ocorrer mesmo se alguma limpeza secundária falhar.
+        releaseRadixBodyLock();
+
         set({
             isLoggedIn: false,
             user: null,
@@ -184,6 +207,11 @@ export const useUserStore = create<UserState>((set) => ({
         clearAuthStorage();
 
         releaseRadixBodyLock();
+        window.setTimeout(releaseRadixBodyLock, 0);
+        window.setTimeout(releaseRadixBodyLock, 120);
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(releaseRadixBodyLock);
+        });
 
         void Promise.allSettled([
             useOutboxStore.persist?.clearStorage?.(),
