@@ -51,6 +51,7 @@ export function BottomNavigationActionSheet({
   const navigate = useNavigate();
   const logout = useUserStore((state) => state.logout);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   function navigateAndClose(path: string): void {
     onOpenChange(false);
@@ -63,9 +64,23 @@ export function BottomNavigationActionSheet({
   }
 
   function handleLogout(): void {
-    setIsLogoutConfirmOpen(false);
-    onOpenChange(false);
-    logout();
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      logout();
+      setIsLogoutConfirmOpen(false);
+      onOpenChange(false);
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Falha ao encerrar sessão:", error);
+      toast.error("Não foi possível sair", {
+        description: "Tente novamente em instantes.",
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   const actions: MenuAction[] = [
@@ -172,12 +187,16 @@ export function BottomNavigationActionSheet({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleLogout}
-            >
-              Sair agora
+            <AlertDialogCancel disabled={isLoggingOut}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                type="button"
+                className="bg-red-600 hover:bg-red-700"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? "Saindo..." : "Sair agora"}
+              </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
