@@ -120,6 +120,19 @@ export const useUserStore = create<UserState>((set) => ({
     },
 
     logout: () => {
+        // O logout deve ocorrer mesmo se alguma limpeza secundária falhar.
+        set({
+            isLoggedIn: false,
+            user: null,
+            vendedorId: null,
+            distribuidorId: null,
+            isLoading: false,
+            error: null,
+        });
+
+        abortDataFetching();
+        resetDataController();
+
         useOutboxStore.setState({ items: [] });
         useSyncStore.getState().resetForLogout();
         useRotasStore.setState({
@@ -147,13 +160,11 @@ export const useUserStore = create<UserState>((set) => ({
 
         clearAuthStorage();
 
-        void Promise.all([
-            useOutboxStore.persist.clearStorage(),
-            useRotasStore.persist.clearStorage(),
-            useSyncStore.persist.clearStorage(),
-            useDeliveryStore.persist.clearStorage(),
+        void Promise.allSettled([
+            useOutboxStore.persist?.clearStorage?.(),
+            useRotasStore.persist?.clearStorage?.(),
+            useSyncStore.persist?.clearStorage?.(),
+            useDeliveryStore.persist?.clearStorage?.(),
         ]);
-
-        set({ isLoggedIn: false, user: null, vendedorId: null, distribuidorId: null });
     },
 }));
