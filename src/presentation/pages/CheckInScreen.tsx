@@ -22,6 +22,10 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
   const [showStatusSelection, setShowStatusSelection] = useState(false);
   const [showSaleDecision, setShowSaleDecision] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<CheckInStatus | null>(null);
+  const isLocationUnavailable =
+    currentLocation === 'Aguardando localização...' ||
+    currentLocation === 'Localização indisponível' ||
+    currentLocation === 'Localização não suportada';
 
   useEffect(() => {
     if ('geolocation' in navigator) {
@@ -61,6 +65,14 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       const vendedorId = parseInt(vendedorIdStr);
       const rotaEntregaId = parseInt(String(delivery.id).replace('del-', '')) || 0;
       const [lat, lng] = currentLocation.split(', ');
+      const latitude = Number(lat);
+      const longitude = Number(lng);
+      const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+
+      if (!hasValidCoordinates) {
+        toast.error('Localização inválida. Ative o GPS e tente novamente.');
+        return;
+      }
       const nowFormatted = formatCheckInApiDate(new Date());
 
       // Validação de Geofencing (Raio de 50 metros)
@@ -93,8 +105,8 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         rotaEntregaId,
         delivery.clienteId,
         nowFormatted,
-        Number(lat),
-        Number(lng)
+        latitude,
+        longitude
       );
 
       if (presenca.queued) {
@@ -129,6 +141,14 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
       if (!vendedorIdStr) throw new Error('Vendedor não encontrado');
 
       const [lat, lng] = currentLocation.split(', ');
+      const latitude = Number(lat);
+      const longitude = Number(lng);
+      const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+
+      if (!hasValidCoordinates) {
+        toast.error('Localização inválida. Ative o GPS e tente novamente.');
+        return;
+      }
       const rotaEntregaId = parseInt(String(delivery?.id || '0').replace('del-', '')) || 0;
       const nowFormatted = formatCheckInApiDate(new Date());
 
@@ -147,8 +167,8 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         observacao: statusLabels[status] || status,
         observacao_descart: "",
         dentro_raio: true,
-        latitude: Number(lat),
-        longitude: Number(lng),
+        latitude,
+        longitude,
         anotacoes: "",
         status: status,
         quantidade_garrafas: delivery?.bottles?.quantity || 0,
@@ -407,8 +427,10 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
                       </p>
                     </div>
                     <div className="flex items-center justify-center space-x-1">
-                      <Wifi className="w-3 h-3 text-green-600" />
-                      <span className="text-xs text-green-600">GPS Conectado</span>
+                      <Wifi className={`w-3 h-3 ${isLocationUnavailable ? 'text-amber-600' : 'text-green-600'}`} />
+                      <span className={`text-xs ${isLocationUnavailable ? 'text-amber-600' : 'text-green-600'}`}>
+                        {isLocationUnavailable ? 'GPS indisponível' : 'GPS Conectado'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -418,7 +440,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
               <div className="p-4 border-t bg-white rounded-b-lg">
                 <Button
                   onClick={handleCheckIn}
-                  disabled={isLoading || currentLocation === 'Aguardando localização...' || !delivery}
+                  disabled={isLoading || isLocationUnavailable || !delivery}
                   className="w-full h-14 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-md text-lg font-semibold"
                 >
                   {isLoading ? (
