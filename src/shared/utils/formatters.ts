@@ -61,7 +61,8 @@ export const formatApiDate = (date: Date): string => {
 };
 
 /**
- * Formata data para o padrão operacional de check-in legado: dd/MM/yyyy HH:mm:ss
+ * Formata data para o padrão operacional de check-in legado: yyyy-MM-ddTHH:mm:ss
+ * Identificado no projeto Android antigo (FerramentasBasicas.DatePraStrFmt)
  */
 export function formatCheckInApiDate(date: Date): string {
     const day = String(date.getDate()).padStart(2, '0');
@@ -71,6 +72,6 @@ export function formatCheckInApiDate(date: Date): string {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
 
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 

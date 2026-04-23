@@ -24,22 +24,26 @@ export const checkInService = {
      * Realiza o check-in completo do atendimento
      */
     async realizarCheckIn(request: CheckInRequest): Promise<CheckInSendResult> {
-        const body = {
+        const body: any = {
             rota_entrega: request.rota_entrega,
-            cliente_id: request.cliente_id,
             data_checkin: request.data_checkin,
-            vendedor: request.vendedor,
+            vendedor: String(request.vendedor),
             observacao: request.observacao,
+            observacao_descart: request.observacao_descart,
             dentro_raio: request.dentro_raio,
-            latitude: request.latitude,
-            longitude: request.longitude,
+            latitude: String(request.latitude),
+            longitude: String(request.longitude),
+            anotacoes: request.anotacoes,
             quantidade_garrafas: request.quantidade_garrafas,
             quantidade_vendida: request.quantidade_vendida,
-            teve_venda: request.teve_venda ? 1 : 0,
         };
 
+        if (request.contas_receber) {
+            body.contas_receber = request.contas_receber;
+        }
+
         try {
-            await checkInApiService.postCheckInFull(request.vendedor, [body]);
+            await checkInApiService.postCheckInFull(Number(request.vendedor), [body]);
             applyLocalDeliveryStatusFromRequest(request);
             return { sent: true, queued: false };
         } catch (error: unknown) {
@@ -64,12 +68,13 @@ export const checkInService = {
             // Envia para a API com o campo observacao_descart preenchido
             await checkInApiService.postCheckIn(vendedorId, {
                 rota_entrega: rotaEntregaId,
-                cliente_id: clienteId,
                 data_checkin: data,
-                vendedor: vendedorId,
+                vendedor: String(vendedorId),
                 observacao_descart: motivo,
                 observacao: `Check-in descartado: ${motivo}`,
-                dentro_raio: true
+                dentro_raio: true,
+                latitude: '0',
+                longitude: '0'
             });
 
             // Reseta o status na store local para permitir novo check-in
@@ -95,11 +100,10 @@ export const checkInService = {
         try {
             await checkInApiService.postCheckIn(vendedorId, {
                 rota_entrega: rotaEntregaId,
-                cliente_id: clienteId,
                 data_checkin: data,
-                vendedor: vendedorId,
-                latitude: lat,
-                longitude: lng,
+                vendedor: String(vendedorId),
+                latitude: String(lat),
+                longitude: String(lng),
                 dentro_raio: true,
                 observacao: 'Check-in inicial',
                 observacao_descart: '',

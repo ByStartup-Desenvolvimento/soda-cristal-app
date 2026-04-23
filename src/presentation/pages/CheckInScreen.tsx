@@ -163,7 +163,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         rota_entrega: rotaEntregaId,
         cliente_id: delivery.clienteId,
         data_checkin: nowFormatted,
-        vendedor: parseInt(vendedorIdStr),
+        vendedor: vendedorIdStr,
         observacao: statusLabels[status] || status,
         observacao_descart: "",
         dentro_raio: true,
