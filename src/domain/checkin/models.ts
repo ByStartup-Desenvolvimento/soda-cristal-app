@@ -6,12 +6,12 @@ export interface CheckInRequest {
     rota_entrega: number;
     cliente_id: number;
     data_checkin: string; // dd/MM/yyyy HH:mm:ss
-    vendedor: number;
+    vendedor: string;
     observacao: string;
     observacao_descart: string;
     dentro_raio: boolean;
-    latitude: number;
-    longitude: number;
+    latitude: string;
+    longitude: string;
     anotacoes: string;
     quantidade_garrafas: number;
     quantidade_vendida: number;
@@ -30,7 +30,7 @@ export interface CheckInRequest {
 export interface SimpleCheckInRequest {
     rota_entrega: number;
     data_checkin: string;
-    vendedor: number;
+    vendedor: string;
     latitude: string;
     longitude: string;
     dentro_raio: boolean;
