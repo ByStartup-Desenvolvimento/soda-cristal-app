@@ -103,7 +103,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           >
             <img src="../logo_soda_cristal.png" alt="Logo Soda Cristal" />
           </div>
-          <span className="text-xs text-gray-400 font-mono">v.20.04.00</span>
+          <span className="text-xs text-gray-400 font-mono">v.23.04.00</span>
           <CardTitle className="text-2xl" style={{ color: "#008000" }}>
             Soda Cristal
           </CardTitle>
