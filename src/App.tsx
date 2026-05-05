@@ -297,7 +297,7 @@ export default function App() {
               path="/pdv/delivery"
               element={
                 <PDVStandalone
-                  delivery={selectedDelivery}
+                  delivery={selectedDelivery || undefined}
                   isFinishingCheckIn={!!checkInCoords}
                   checkInCoordinates={checkInCoords}
                   onBack={() => {
