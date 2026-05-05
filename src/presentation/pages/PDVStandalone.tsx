@@ -259,12 +259,20 @@ export function PDVStandalone({
 
       // Se estiver finalizando um check-in, envia também o registro de atendimento com a quantidade correta
       if (isFinishingCheckIn && delivery && checkInCoordinates) {
-        // Calcula a quantidade de garrafas/sifões no carrinho para atualizar o check-in
-        const bottleQuantity = cart.reduce((acc, item) => {
-          const isBottle = item.product.id < 0 || 
-                          item.product.categoria?.toLowerCase() === 'sifão' || 
-                          item.product.categoria?.toLowerCase() === 'garrafa';
-          return isBottle ? acc + item.quantity : acc;
+        // Separa as quantidades de reposição e venda real para o relatório de check-in
+        const reposicaoQuantity = cart.reduce((acc, item) => {
+          // ID -1 é o produto virtual "Garrafa Reposição"
+          return item.product.id === -1 ? acc + item.quantity : acc;
+        }, 0);
+
+        const vendidaQuantity = cart.reduce((acc, item) => {
+          // ID -2 é "Garrafa Vendida", ou qualquer outro produto da categoria Sifão/Garrafa que não seja reposição
+          const isOtherBottle = item.product.id !== -1 && (
+            item.product.id === -2 ||
+            item.product.categoria?.toLowerCase() === 'sifão' || 
+            item.product.categoria?.toLowerCase() === 'garrafa'
+          );
+          return isOtherBottle ? acc + item.quantity : acc;
         }, 0);
 
         const rotaEntregaId = parseInt(String(delivery.id).replace('del-', '')) || 0;
@@ -282,8 +290,8 @@ export function PDVStandalone({
           longitude: String(checkInCoordinates.longitude),
           anotacoes: "", 
           status: "delivered" as CheckInStatus,
-          quantidade_garrafas: delivery.bottles?.quantity || 0,
-          quantidade_vendida: bottleQuantity, // A quantidade real do PDV
+          quantidade_garrafas: reposicaoQuantity, // Agora envia a quantidade real de reposição do PDV
+          quantidade_vendida: vendidaQuantity,    // Agora envia a quantidade real de garrafas vendidas do PDV
           teve_venda: true,
           contas_receber: {
             valor: getTotal().toFixed(2),

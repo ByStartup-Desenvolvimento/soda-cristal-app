@@ -32,4 +32,5 @@ export interface DeliveryStatusData {
     checkInStatus?: CheckInStatus;
     hadSale?: boolean;
     timestamp?: string;
+    reposicaoQty?: number;
 }

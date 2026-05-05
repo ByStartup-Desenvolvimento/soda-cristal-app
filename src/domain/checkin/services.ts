@@ -8,6 +8,7 @@ function applyLocalDeliveryStatusFromRequest(request: CheckInRequest): void {
     useDeliveryStore.getState().updateDeliveryStatus(String(request.rota_entrega), {
         checkInStatus: request.status || (request.quantidade_vendida > 0 ? 'delivered' : 'no-sale'),
         hadSale: request.teve_venda,
+        reposicaoQty: request.quantidade_garrafas,
         timestamp: new Date().toISOString(),
     });
 }
