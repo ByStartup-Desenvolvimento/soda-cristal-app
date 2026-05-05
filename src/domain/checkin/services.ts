@@ -49,7 +49,7 @@ export const checkInService = {
         } catch (error: unknown) {
             if (isNetworkError(error)) {
                 useOutboxStore.getState().enqueueCheckInFull({
-                    vendedorId: request.vendedor,
+                    vendedorId: Number(request.vendedor),
                     body,
                 });
                 applyLocalDeliveryStatusFromRequest(request);
@@ -63,7 +63,7 @@ export const checkInService = {
     /**
      * Descarta um check-in realizado
      */
-    async descartarCheckIn(vendedorId: number, rotaEntregaId: number, clienteId: number, motivo: MotivoDescarteLabel, data: string): Promise<void> {
+    async descartarCheckIn(vendedorId: number, rotaEntregaId: number, _clienteId: number, motivo: MotivoDescarteLabel, data: string): Promise<void> {
         try {
             // Envia para a API com o campo observacao_descart preenchido
             await checkInApiService.postCheckIn(vendedorId, {
@@ -82,47 +82,6 @@ export const checkInService = {
 
         } catch (error) {
             console.error('Erro ao descartar check-in:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Realiza um check-in simples (apenas registro de presença)
-     */
-    async registrarPresenca(
-        vendedorId: number,
-        rotaEntregaId: number,
-        clienteId: number,
-        data: string,
-        lat: number,
-        lng: number
-    ): Promise<CheckInSendResult> {
-        try {
-            await checkInApiService.postCheckIn(vendedorId, {
-                rota_entrega: rotaEntregaId,
-                data_checkin: data,
-                vendedor: String(vendedorId),
-                latitude: String(lat),
-                longitude: String(lng),
-                dentro_raio: true,
-                observacao: 'Check-in inicial',
-                observacao_descart: '',
-                anotacoes: '',
-            });
-            return { sent: true, queued: false };
-        } catch (error: unknown) {
-            if (isNetworkError(error)) {
-                useOutboxStore.getState().enqueueCheckInPresenca({
-                    vendedorId,
-                    rota_entrega: rotaEntregaId,
-                    cliente_id: clienteId,
-                    data_checkin: data,
-                    latitude: lat,
-                    longitude: lng,
-                });
-                return { sent: false, queued: true };
-            }
-            console.error('Erro ao registrar presença:', error);
             throw error;
         }
     },

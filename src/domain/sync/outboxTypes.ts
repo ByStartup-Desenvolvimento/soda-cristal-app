@@ -1,15 +1,7 @@
 /** Tipos de mutação enfileirada para envio quando a rede voltar. */
-export type OutboxMutationType = 'CHECK_IN_PRESENCA' | 'CHECK_IN_FULL';
+export type OutboxMutationType = 'CHECK_IN_FULL';
 
-/** Payload do POST inicial de presença (check-in inicial). */
-export interface CheckInPresencaPayload {
-    vendedorId: number;
-    rota_entrega: number;
-    cliente_id: number;
-    data_checkin: string;
-    latitude: number;
-    longitude: number;
-}
+/** Corpo do POST completo de check-in (finalização do atendimento). */
 
 /** Corpo do POST completo de check-in (finalização do atendimento). */
 export interface CheckInFullPayload {
@@ -32,16 +24,10 @@ export interface CheckInFullPayload {
 export interface OutboxItem {
     id: string;
     type: OutboxMutationType;
-    payload: CheckInPresencaPayload | CheckInFullPayload;
+    payload: CheckInFullPayload;
     /** Para idempotência futura no backend; hoje espelha `id`. */
     clientRequestId: string;
     createdAt: number;
     attempts: number;
     lastError: string | null;
-}
-
-export function isCheckInPresencaPayload(
-    p: CheckInPresencaPayload | CheckInFullPayload
-): p is CheckInPresencaPayload {
-    return 'vendedorId' in p && !('body' in p);
 }

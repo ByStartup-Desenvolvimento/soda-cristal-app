@@ -1,7 +1,6 @@
 import { checkInApiService } from '../../shared/api/services/checkInServices';
 import { isNetworkError } from '../../shared/api/networkUtils';
 import type { OutboxItem } from './outboxTypes';
-import { isCheckInPresencaPayload } from './outboxTypes';
 import { useOutboxStore } from './outboxStore';
 
 let flushInFlight = false;
@@ -9,32 +8,11 @@ let flushInFlight = false;
 const MAX_ATTEMPTS = 8;
 
 function getRotaEntregaIdFromItem(item: OutboxItem): number | null {
-    const payload = item.payload;
-    if (isCheckInPresencaPayload(payload)) return payload.rota_entrega;
-    return payload.body.rota_entrega;
+    return item.payload.body.rota_entrega;
 }
 
 async function sendItem(item: OutboxItem): Promise<void> {
-    if (item.type === 'CHECK_IN_PRESENCA') {
-        const p = item.payload;
-        if (!isCheckInPresencaPayload(p)) throw new Error('Payload inválido para CHECK_IN_PRESENCA');
-        await checkInApiService.postCheckIn(p.vendedorId, {
-            rota_entrega: p.rota_entrega,
-            cliente_id: p.cliente_id,
-            data_checkin: p.data_checkin,
-            vendedor: p.vendedorId,
-            latitude: p.latitude,
-            longitude: p.longitude,
-            dentro_raio: true,
-            observacao: 'Check-in inicial',
-            observacao_descart: '',
-            anotacoes: '',
-        });
-        return;
-    }
-
     const p = item.payload;
-    if (isCheckInPresencaPayload(p)) throw new Error('Payload inválido para CHECK_IN_FULL');
     await checkInApiService.postCheckInFull(p.vendedorId, [p.body]);
 }
 

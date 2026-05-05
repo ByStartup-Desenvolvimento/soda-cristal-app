@@ -87,6 +87,7 @@ export default function App() {
       useDeliveryStore.persist.rehydrate(),
     ]).then(() => {
       if (!cancelled) {
+        useDeliveryStore.getState().cleanupOldStatuses();
         deriveClientesRota();
         setHasHydratedFromStorage(true);
       }

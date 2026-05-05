@@ -62,8 +62,6 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         return;
       }
 
-      const vendedorId = parseInt(vendedorIdStr);
-      const rotaEntregaId = parseInt(String(delivery.id).replace('del-', '')) || 0;
       const [lat, lng] = currentLocation.split(', ');
       const latitude = Number(lat);
       const longitude = Number(lng);
@@ -73,8 +71,6 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         toast.error('Localização inválida. Ative o GPS e tente novamente.');
         return;
       }
-      const nowFormatted = formatCheckInApiDate(new Date());
-
       // Validação de Geofencing (Raio de 50 metros)
       if (delivery.latitude && delivery.longitude) {
         const destLat = parseFloat(delivery.latitude);
@@ -99,21 +95,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         }
       }
 
-      // Registro de presença (check-in inicial)
-      const presenca = await checkInService.registrarPresenca(
-        vendedorId,
-        rotaEntregaId,
-        delivery.clienteId,
-        nowFormatted,
-        latitude,
-        longitude
-      );
-
-      if (presenca.queued) {
-        toast.info('Sem conexão: presença salva e será enviada ao reconectar.');
-      }
-
-      // Show status selection screen
+      // Show status selection screen (No more registrarPresenca call here)
       setShowStatusSelection(true);
 
     } catch (error) {
@@ -127,7 +109,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
     if (status === 'delivered') {
       setSelectedStatus(status);
       // setShowSaleDecision(true);
-      handleSaleDecision(true);
+      handleSaleDecision(true, status);
     } else {
       // For absent statuses, finish immediately without sale
       finishCheckIn(status, false);
@@ -207,9 +189,10 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
     }
   };
 
-  const handleSaleDecision = (hasSale: boolean) => {
-    if (!selectedStatus) return;
-    finishCheckIn(selectedStatus, hasSale);
+  const handleSaleDecision = (hasSale: boolean, statusOverride?: CheckInStatus) => {
+    const status = statusOverride || selectedStatus;
+    if (!status) return;
+    finishCheckIn(status, hasSale);
   };
 
   // const getStatusInfo = (status?: string) => {

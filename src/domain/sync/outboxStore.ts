@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
-import type { CheckInFullPayload, CheckInPresencaPayload, OutboxItem } from './outboxTypes';
+import type { CheckInFullPayload, OutboxItem } from './outboxTypes';
 
 interface OutboxState {
     items: OutboxItem[];
-    enqueueCheckInPresenca: (payload: CheckInPresencaPayload) => string;
     enqueueCheckInFull: (payload: CheckInFullPayload) => string;
     removeItem: (id: string) => void;
     patchItem: (id: string, patch: Pick<OutboxItem, 'attempts' | 'lastError'>) => void;
@@ -21,21 +20,6 @@ export const useOutboxStore = create<OutboxState>()(
     persist(
         (set) => ({
             items: [],
-
-            enqueueCheckInPresenca: (payload: CheckInPresencaPayload) => {
-                const id = newId();
-                const item: OutboxItem = {
-                    id,
-                    type: 'CHECK_IN_PRESENCA',
-                    payload,
-                    clientRequestId: id,
-                    createdAt: Date.now(),
-                    attempts: 0,
-                    lastError: null,
-                };
-                set((s) => ({ items: [...s.items, item] }));
-                return id;
-            },
 
             enqueueCheckInFull: (payload: CheckInFullPayload) => {
                 const id = newId();
