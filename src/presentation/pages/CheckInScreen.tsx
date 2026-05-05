@@ -13,7 +13,7 @@ import { calculateDistance } from '../../shared/utils/location';
 interface CheckInScreenProps {
   delivery?: any;
   onBack: () => void;
-  onCheckInComplete?: (delivery: any, status: CheckInStatus, hadSale: boolean) => void;
+  onCheckInComplete?: (delivery: any, status: CheckInStatus, hadSale: boolean, coordinates?: { latitude: string | number, longitude: string | number }) => void;
 }
 
 export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInScreenProps) {
@@ -192,7 +192,16 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
   const handleSaleDecision = (hasSale: boolean, statusOverride?: CheckInStatus) => {
     const status = statusOverride || selectedStatus;
     if (!status) return;
-    finishCheckIn(status, hasSale);
+
+    // Se for entrega com venda, o PDV será responsável por finalizar o check-in com a quantidade correta
+    if (status === 'delivered' && hasSale) {
+      if (onCheckInComplete && delivery) {
+        const [lat, lng] = currentLocation.split(', ');
+        onCheckInComplete(delivery, status, true, { latitude: lat, longitude: lng });
+      }
+    } else {
+      finishCheckIn(status, hasSale);
+    }
   };
 
   // const getStatusInfo = (status?: string) => {

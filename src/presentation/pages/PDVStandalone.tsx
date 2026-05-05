@@ -32,6 +32,9 @@ import { MeioPagamento } from "../../domain/pagamentos/models";
 import { Venda } from "../../domain/vendas/model";
 import { TipoCliente } from "../../domain/deliveries/models";
 import { getPrecoByTipoCliente } from "../../domain/produtos/precoPorTipoCliente";
+import { checkInService } from "../../domain/checkin/services";
+import { formatCheckInApiDate } from "../../shared/utils/formatters";
+import { CheckInStatus } from "../../domain/deliveries/models";
 
 interface CartItem {
   product: Produto;
@@ -41,12 +44,16 @@ interface CartItem {
 interface PDVStandaloneProps {
   delivery?: {
     id: string;
+    clienteId: number;
     customerName: string;
     address: string;
     orderCode?: string;
     tipoCliente?: TipoCliente;
+    bottles?: { quantity: number; size: string };
   };
   customerName?: string;
+  isFinishingCheckIn?: boolean;
+  checkInCoordinates?: { latitude: string | number; longitude: string | number } | null;
   onBack?: () => void;
 }
 
@@ -74,6 +81,8 @@ const BOTTLE_PRODUCTS: Produto[] = [
 export function PDVStandalone({
   delivery,
   customerName: propCustomerName,
+  isFinishingCheckIn,
+  checkInCoordinates,
   onBack,
 }: PDVStandaloneProps = {}) {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -248,6 +257,47 @@ export function PDVStandalone({
 
       await vendasService.criarVendaXarope([venda]);
 
+      // Se estiver finalizando um check-in, envia também o registro de atendimento com a quantidade correta
+      if (isFinishingCheckIn && delivery && checkInCoordinates) {
+        // Calcula a quantidade de garrafas/sifões no carrinho para atualizar o check-in
+        const bottleQuantity = cart.reduce((acc, item) => {
+          const isBottle = item.product.id < 0 || 
+                          item.product.categoria?.toLowerCase() === 'sifão' || 
+                          item.product.categoria?.toLowerCase() === 'garrafa';
+          return isBottle ? acc + item.quantity : acc;
+        }, 0);
+
+        const rotaEntregaId = parseInt(String(delivery.id).replace('del-', '')) || 0;
+        const nowFormatted = formatCheckInApiDate(new Date());
+
+        await checkInService.realizarCheckIn({
+          rota_entrega: rotaEntregaId,
+          cliente_id: delivery.clienteId,
+          data_checkin: nowFormatted,
+          vendedor: vendedorId,
+          observacao: "Entregue",
+          observacao_descart: "",
+          dentro_raio: true,
+          latitude: checkInCoordinates.latitude,
+          longitude: checkInCoordinates.longitude,
+          anotacoes: "", 
+          status: "delivered" as CheckInStatus,
+          quantidade_garrafas: delivery.bottles?.quantity || 0,
+          quantidade_vendida: bottleQuantity, // A quantidade real do PDV
+          teve_venda: true,
+          contas_receber: {
+            valor: getTotal().toFixed(2),
+            parcelas: [
+              {
+                recebido: true,
+                valor: getTotal().toFixed(2),
+                meio_pagamento_id: Number(paymentMethod),
+              },
+            ],
+          }
+        });
+      }
+
       toast.success(
         <div>
           <p>
@@ -260,8 +310,13 @@ export function PDVStandalone({
 
       // Reset
       setCart([]);
-      if (!delivery) setCustomerName(""); // Mantém nome se for delivery context
+      if (!delivery) setCustomerName(""); 
       setPaymentMethod("");
+
+      // Se for check-in, volta automaticamente após o sucesso
+      if (isFinishingCheckIn && onBack) {
+        onBack();
+      }
     } catch (error) {
       console.error("Erro ao finalizar venda:", error);
       toast.error("Erro ao registrar venda no sistema. Tente novamente.");
