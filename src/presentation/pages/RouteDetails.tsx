@@ -46,21 +46,16 @@ interface RouteDetailsProps {
 interface DeliveryCardProps {
   delivery: Delivery;
   index: number;
-  checkInStatus: any; // We can improve this if we have the type
+  checkInStatus: any; 
   statusData: DeliveryStatusData | undefined;
   route: Route;
   setDeliveryParaDescartar: (d: Delivery | null) => void;
   setDescarteSheetOpen: (open: boolean) => void;
-  setSelectedDelivery: (d: Delivery | null) => void;
   onCheckIn: (d: Delivery) => void;
   onOpenPDV: (d: Delivery) => void;
   handleWhatsApp: (phone: string) => void;
-  setClienteParaEditar: (c: RotaEntregaCompleta | null) => void;
-  setEditSheetOpen: (open: boolean) => void;
-  setClienteParaDesativar: (c: RotaEntregaCompleta | null) => void;
-  setDesativarSheetOpen: (open: boolean) => void;
   openGPS: (d: Delivery) => void;
-  clientesRota: RotaEntregaCompleta[];
+  onActionsClick: (d: Delivery) => void;
 }
 
 const TIPO_CLIENTE_BADGE_COLORS: Record<string, string> = {
@@ -77,10 +72,9 @@ const TIPO_CLIENTE_BORDER_COLORS: Record<string, string> = {
 
 const MemoizedDeliveryCard = memo(({ 
   delivery, index, checkInStatus, statusData, route, 
-  setDeliveryParaDescartar, setDescarteSheetOpen, setSelectedDelivery, 
-  onCheckIn, onOpenPDV, handleWhatsApp, setClienteParaEditar, 
-  setEditSheetOpen, setClienteParaDesativar, setDesativarSheetOpen, 
-  openGPS, clientesRota 
+  setDeliveryParaDescartar, setDescarteSheetOpen, 
+  onCheckIn, onOpenPDV, handleWhatsApp, 
+  openGPS, onActionsClick 
 }: DeliveryCardProps) => {
   const visualDiasSemAtendimento = statusData?.checkInStatus ? 0 : (delivery.diasSemAtendimento ?? 0);
   const visualDiasSemConsumo = statusData?.hadSale ? 0 : (delivery.diasSemConsumo ?? 0);
@@ -237,77 +231,16 @@ const MemoizedDeliveryCard = memo(({
 
         {!checkInStatus && !statusData?.checkInStatus && (
           <div className="pt-2 border-t">
-            <Sheet>
-              <SheetTrigger asChild>
-                <button
-                  className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium"
-                  onClick={() => setSelectedDelivery(delivery)}
-                >
-                  Ações do Cliente
-                </button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-auto p-4">
-                <SheetHeader>
-                  <SheetTitle>{delivery.customerName}</SheetTitle>
-                  <SheetDescription>
-                    {delivery.address}
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="space-y-3 my-[24px] mx-10">
-                  <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                    onClick={() => onCheckIn(delivery)}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Fazer Check-in
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => onOpenPDV(delivery)}
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Abrir PDV
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full text-green-700 border-green-300 hover:bg-green-50"
-                    onClick={() => handleWhatsApp(delivery.customerPhone)}
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Enviar WhatsApp
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full text-amber-700 border-amber-300 hover:bg-amber-50"
-                    onClick={() => {
-                      const original = clientesRota.find((c: any) => c.cliente.id === delivery.clienteId);
-                      if (original) {
-                        setClienteParaEditar(original);
-                        setEditSheetOpen(true);
-                      }
-                    }}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Editar Cliente
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full text-red-700 border-red-300 hover:bg-red-50"
-                    onClick={() => {
-                      const original = clientesRota.find((c: any) => c.cliente.id === delivery.clienteId);
-                      if (original) {
-                        setClienteParaDesativar(original);
-                        setDesativarSheetOpen(true);
-                      }
-                    }}
-                  >
-                    <UserX className="w-4 h-4 mr-2" />
-                    Desativar Cliente
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center border-gray-300 hover:bg-gray-50 text-sm font-medium h-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                onActionsClick(delivery);
+              }}
+            >
+              Ações do Cliente
+            </Button>
           </div>
         )}
 
@@ -352,7 +285,8 @@ const MemoizedDeliveryCard = memo(({
 });
 
 export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpenPDV }: RouteDetailsProps) {
-  const [_selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+  const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+  const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [clienteParaEditar, setClienteParaEditar] = useState<RotaEntregaCompleta | null>(null);
   const [desativarSheetOpen, setDesativarSheetOpen] = useState(false);
@@ -762,16 +696,14 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
                 route={route}
                 setDeliveryParaDescartar={setDeliveryParaDescartar}
                 setDescarteSheetOpen={setDescarteSheetOpen}
-                setSelectedDelivery={setSelectedDelivery}
                 onCheckIn={onCheckIn}
                 onOpenPDV={onOpenPDV}
                 handleWhatsApp={handleWhatsApp}
-                setClienteParaEditar={setClienteParaEditar}
-                setEditSheetOpen={setEditSheetOpen}
-                setClienteParaDesativar={setClienteParaDesativar}
-                setDesativarSheetOpen={setDesativarSheetOpen}
                 openGPS={openGPS}
-                clientesRota={clientesRota}
+                onActionsClick={(d) => {
+                  setSelectedDelivery(d);
+                  setActionsSheetOpen(true);
+                }}
               />
             );
           })
@@ -797,6 +729,84 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
         cliente={clienteParaDesativar}
         onSaved={() => { if (!isNaN(numericRotaId)) loadClientesRota(numericRotaId); }}
       />
+
+      {/* Menu de Ações Centralizado */}
+      <Sheet open={actionsSheetOpen} onOpenChange={setActionsSheetOpen}>
+        <SheetContent side="bottom" className="h-auto p-0 border-t-2 rounded-t-xl overflow-hidden">
+          <SheetHeader className="p-4 bg-slate-50 border-b">
+            <SheetTitle>{selectedDelivery?.customerName}</SheetTitle>
+            <SheetDescription>
+              {selectedDelivery?.address}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-col p-4 pb-12 space-y-3">
+            <Button
+              className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 shadow-md"
+              onClick={() => {
+                setActionsSheetOpen(false);
+                if (selectedDelivery) onCheckIn(selectedDelivery);
+              }}
+            >
+              <CheckCircle className="w-5 h-5 mr-2" />
+              Fazer Check-in
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 text-base font-semibold border-slate-200"
+              onClick={() => {
+                setActionsSheetOpen(false);
+                if (selectedDelivery) onOpenPDV(selectedDelivery);
+              }}
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              Abrir PDV
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 text-base font-semibold text-green-700 border-green-200 hover:bg-green-50"
+              onClick={() => {
+                setActionsSheetOpen(false);
+                if (selectedDelivery) handleWhatsApp(selectedDelivery.customerPhone);
+              }}
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Enviar WhatsApp
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 text-base font-semibold text-amber-700 border-amber-200 hover:bg-amber-50"
+              onClick={() => {
+                if (!selectedDelivery) return;
+                const original = clientesRota.find((c: any) => c.cliente.id === selectedDelivery.clienteId);
+                if (original) {
+                  setActionsSheetOpen(false);
+                  setClienteParaEditar(original);
+                  setEditSheetOpen(true);
+                }
+              }}
+            >
+              <Edit className="w-5 h-5 mr-2" />
+              Editar Cliente
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 text-base font-semibold text-red-700 border-red-200 hover:bg-red-50"
+              onClick={() => {
+                if (!selectedDelivery) return;
+                const original = clientesRota.find((c: any) => c.cliente.id === selectedDelivery.clienteId);
+                if (original) {
+                  setActionsSheetOpen(false);
+                  setClienteParaDesativar(original);
+                  setDesativarSheetOpen(true);
+                }
+              }}
+            >
+              <UserX className="w-5 h-5 mr-2" />
+              Desativar Cliente
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <CheckInDescarteSheet
         open={descarteSheetOpen}
