@@ -1,10 +1,9 @@
-import { useState, type ComponentType } from "react";
+import { type ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardList,
   FileUp,
   Handshake,
-  LogOut,
   PlusCircle,
   Route,
   Send,
@@ -20,17 +19,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../../shared/ui/sheet";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../../shared/ui/alert-dialog";
-import { useUserStore } from "../../domain/auth/userStore";
 
 interface BottomNavigationActionSheetProps {
   isOpen: boolean;
@@ -49,9 +37,6 @@ export function BottomNavigationActionSheet({
   onOpenChange,
 }: BottomNavigationActionSheetProps) {
   const navigate = useNavigate();
-  const logout = useUserStore((state) => state.logout);
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   function navigateAndClose(path: string): void {
     onOpenChange(false);
@@ -61,40 +46,6 @@ export function BottomNavigationActionSheet({
   function showNotImplementedFeature(label: string): void {
     onOpenChange(false);
     toast.info(`${label} será disponibilizado em breve.`);
-  }
-
-  const RADIX_CLOSE_ANIMATION_MS = 300;
-
-  function runAfterRadixClose(callback: () => void): void {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        window.setTimeout(callback, RADIX_CLOSE_ANIMATION_MS);
-      });
-    });
-  }
-
-  function handleLogout(): void {
-    if (isLoggingOut) return;
-
-    setIsLoggingOut(true);
-
-    // Fecha overlays ANTES do logout para que o Radix faça o cleanup
-    // do pointer-events/scroll-lock no <body>. Sem isso, o componente é
-    // desmontado enquanto o Dialog ainda está aberto e o body fica travado.
-    setIsLogoutConfirmOpen(false);
-    onOpenChange(false);
-
-    runAfterRadixClose(() => {
-      try {
-        logout();
-      } catch (error) {
-        console.error("Falha ao encerrar sessão:", error);
-        toast.error("Não foi possível sair", {
-          description: "Tente novamente em instantes.",
-        });
-        setIsLoggingOut(false);
-      }
-    });
   }
 
   const actions: MenuAction[] = [
@@ -177,44 +128,9 @@ export function BottomNavigationActionSheet({
               );
             })}
 
-            <Button
-              variant="ghost"
-              className="h-14 justify-start rounded-none border-b px-4 text-sm font-normal text-red-600 hover:text-red-700"
-              onClick={() => setIsLogoutConfirmOpen(true)}
-            >
-              <LogOut className="mr-3 h-4 w-4" />
-              Sair
-            </Button>
           </div>
         </SheetContent>
       </Sheet>
-
-      <AlertDialog
-        open={isLogoutConfirmOpen}
-        onOpenChange={setIsLogoutConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você encerrará sua sessão atual e voltará para a tela de login.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoggingOut}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button
-                type="button"
-                className="bg-red-600 hover:bg-red-700"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut ? "Saindo..." : "Sair agora"}
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

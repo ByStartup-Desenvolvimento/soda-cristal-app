@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Button } from '../../shared/ui/button';
-import { Home, Users, ShoppingCart, Route, Menu } from 'lucide-react';
+import { Home, Users, ShoppingCart, Route, Menu, LogOut } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useUserStore } from '../../domain/auth/userStore';
 import { BottomNavigationActionSheet } from './BottomNavigationActionSheet';
 
 export function BottomNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
+  const logout = useUserStore((s) => s.logout);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
   const navItems = [
@@ -43,6 +45,16 @@ export function BottomNavigation() {
       icon: ShoppingCart,
       path: '/pdv',
       preload: () => import('../pages/PDVStandalone')
+    },
+    {
+      id: 'logout',
+      label: 'Sair',
+      icon: LogOut,
+      onClick: () => {
+        if (window.confirm('Deseja realmente sair do aplicativo?')) {
+          logout();
+        }
+      }
     }
   ];
 
