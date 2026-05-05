@@ -97,7 +97,7 @@ export function ClienteDesativarSheet({ open, onOpenChange, cliente, onSaved }: 
         cf_xarope: Boolean(cliente.cliente.cf_xarope),
         cf_agua: Boolean(cliente.cliente.cf_agua),
         precoespecial_agua: Boolean(cliente.cliente.precoespecial_agua),
-        precoespecial_xarope: Boolean(cliente.cliente.precoespecial_xarope),
+        precoespecial_xarope: Boolean(cliente.cliente.xarope_preco_especial),
       };
 
       await clientesServices.inativarCliente(payload);

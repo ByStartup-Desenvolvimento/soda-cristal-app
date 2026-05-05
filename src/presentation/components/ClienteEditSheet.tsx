@@ -59,7 +59,7 @@ export function ClienteEditSheet({ open, onOpenChange, cliente, onSaved }: Clien
     setCfAgua(Boolean(cliente.cliente.cf_agua));
     setCfXarope(Boolean(cliente.cliente.cf_xarope));
     setPeAgua(Boolean(cliente.cliente.precoespecial_agua));
-    setPeXarope(Boolean(cliente.cliente.precoespecial_xarope));
+    setPeXarope(Boolean(cliente.cliente.xarope_preco_especial));
   };
 
   useEffect(() => {

@@ -73,7 +73,7 @@ const TIPO_CLIENTE_BORDER_COLORS: Record<string, string> = {
 const MemoizedDeliveryCard = memo(({ 
   delivery, index, checkInStatus, statusData, route, 
   setDeliveryParaDescartar, setDescarteSheetOpen, 
-  onCheckIn, onOpenPDV, handleWhatsApp, 
+  handleWhatsApp, 
   openGPS, onActionsClick 
 }: DeliveryCardProps) => {
   const visualDiasSemAtendimento = statusData?.checkInStatus ? 0 : (delivery.diasSemAtendimento ?? 0);
@@ -777,7 +777,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
               className="w-full h-12 text-base font-semibold text-amber-700 border-amber-200 hover:bg-amber-50"
               onClick={() => {
                 if (!selectedDelivery) return;
-                const original = clientesRota.find((c: any) => c.cliente.id === selectedDelivery.clienteId);
+                const source = (!isNaN(numericRotaId) && deliveriesPorRota[numericRotaId]) || clientesRota;
+                const original = source.find((c: any) => c.cliente.id === selectedDelivery.clienteId);
                 if (original) {
                   setActionsSheetOpen(false);
                   setClienteParaEditar(original);
@@ -793,7 +794,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
               className="w-full h-12 text-base font-semibold text-red-700 border-red-200 hover:bg-red-50"
               onClick={() => {
                 if (!selectedDelivery) return;
-                const original = clientesRota.find((c: any) => c.cliente.id === selectedDelivery.clienteId);
+                const source = (!isNaN(numericRotaId) && deliveriesPorRota[numericRotaId]) || clientesRota;
+                const original = source.find((c: any) => c.cliente.id === selectedDelivery.clienteId);
                 if (original) {
                   setActionsSheetOpen(false);
                   setClienteParaDesativar(original);

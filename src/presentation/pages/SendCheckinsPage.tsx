@@ -17,6 +17,7 @@ import { useOutboxStore } from "../../domain/sync/outboxStore";
 import { useDeliveryStore } from "../../domain/deliveries/deliveryStore";
 import { useNetworkStore } from "../../shared/store/networkStore";
 import { flushOutboxByRotaEntregaIds } from "../../domain/sync/flushOutbox";
+import type { CheckInFullPayload } from "../../domain/sync/outboxTypes";
 
 interface SendCheckinsPageProps {
   onBack: () => void;
@@ -80,10 +81,8 @@ export function SendCheckinsPage({ onBack }: SendCheckinsPageProps) {
     });
 
     const pendingOutboxItems = outboxItems.filter((item) => {
-      const rotaEntregaId =
-        "body" in item.payload
-          ? item.payload.body.rota_entrega
-          : item.payload.rota_entrega;
+      const payload = item.payload as CheckInFullPayload;
+      const rotaEntregaId = payload.body.rota_entrega;
       return selectedEntregaIds.has(rotaEntregaId);
     });
 

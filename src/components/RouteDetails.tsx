@@ -85,7 +85,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       priority: 'high',
       estimatedTime: '09:00',
       routeName: 'Rota Centro',
-      notes: 'Portão azul, interfone 23'
+      notes: 'Portão azul, interfone 23',
+      tipoCliente: 'normal'
     },
     {
       id: 'del-002',
@@ -99,7 +100,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       status: 'pending',
       priority: 'medium',
       estimatedTime: '09:30',
-      routeName: 'Rota Centro'
+      routeName: 'Rota Centro',
+      tipoCliente: 'normal'
     },
     {
       id: 'del-003',
@@ -113,7 +115,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       status: 'completed',
       priority: 'low',
       estimatedTime: '10:00',
-      routeName: 'Rota Centro'
+      routeName: 'Rota Centro',
+      tipoCliente: 'normal'
     },
     {
       id: 'del-004',
@@ -128,7 +131,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       priority: 'high',
       estimatedTime: '10:30',
       routeName: 'Rota Centro',
-      notes: 'Entregar apenas pela manhã'
+      notes: 'Entregar apenas pela manhã',
+      tipoCliente: 'normal'
     },
     {
       id: 'del-005',
@@ -142,7 +146,8 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
       status: 'pending',
       priority: 'medium',
       estimatedTime: '11:00',
-      routeName: 'Rota Centro'
+      routeName: 'Rota Centro',
+      tipoCliente: 'normal'
     }
   ];
 
