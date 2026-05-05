@@ -9,7 +9,7 @@ import { useNetworkStore, initNetworkListener } from "./shared/store/networkStor
 import { PendingSyncBanner } from "./presentation/components/PendingSyncBanner";
 import { Toaster } from "./shared/ui/sonner";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import React, { useEffect, lazy, Suspense } from "react";
+import React, { useEffect, lazy, Suspense, useState } from "react";
 import { LoginScreen } from "./presentation/pages/LoginScreen";
 import { BottomNavigation } from "./presentation/components/BottomNavigation";
 import { PageLoader } from "./presentation/components/ui/PageLoader";
