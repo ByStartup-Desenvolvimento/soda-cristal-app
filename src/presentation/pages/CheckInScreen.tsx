@@ -153,8 +153,8 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         longitude: lng,
         anotacoes: "",
         status: status,
-        quantidade_garrafas: delivery?.bottles?.quantity || 0,
-        quantidade_vendida: status === 'delivered' ? (delivery?.bottles?.quantity || 1) : 0,
+        quantidade_garrafas: status === 'delivered' ? (delivery?.bottles?.quantity || 0) : 0,
+        quantidade_vendida: 0, // Quando finalizado por aqui, nunca há venda real (que passaria pelo PDV)
         teve_venda: hasSale
       });
 
