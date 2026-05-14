@@ -71,7 +71,7 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         toast.error('Localização inválida. Ative o GPS e tente novamente.');
         return;
       }
-      // Validação de Geofencing (Raio de 50 metros)
+      // Validação de Geofencing (Raio de 100 metros)
       if (delivery.latitude && delivery.longitude) {
         const destLat = parseFloat(delivery.latitude);
         const destLng = parseFloat(delivery.longitude);
@@ -81,12 +81,12 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         if (!isNaN(destLat) && !isNaN(destLng)) {
           const distance = calculateDistance(userLat, userLng, destLat, destLng);
           
-          if (distance > 50) {
+          if (distance > 100) {
             toast.error(
               <div className="space-y-2">
                 <p className="font-bold text-red-700">Fora do Raio de Atendimento</p>
                 <p className="text-sm">Você está a {Math.round(distance)} metros do cliente.</p>
-                <p className="text-sm">O check-in só é permitido em um raio de 50 metros.</p>
+                <p className="text-sm">O check-in só é permitido em um raio de 100 metros.</p>
               </div>
             );
             setIsLoading(false);
