@@ -56,6 +56,11 @@ interface DeliveryCardProps {
   handleWhatsApp: (phone: string) => void;
   openGPS: (d: Delivery) => void;
   onActionsClick: (d: Delivery) => void;
+  clientesRota: RotaEntregaCompleta[];
+  setClienteParaEditar: (c: RotaEntregaCompleta | null) => void;
+  setEditSheetOpen: (open: boolean) => void;
+  setClienteParaDesativar: (c: RotaEntregaCompleta | null) => void;
+  setDesativarSheetOpen: (open: boolean) => void;
 }
 
 const TIPO_CLIENTE_BADGE_COLORS: Record<string, string> = {
@@ -74,7 +79,9 @@ const MemoizedDeliveryCard = memo(({
   delivery, index, checkInStatus, statusData, route, 
   setDeliveryParaDescartar, setDescarteSheetOpen, 
   handleWhatsApp, 
-  openGPS, onActionsClick 
+  openGPS, onActionsClick,
+  clientesRota, setClienteParaEditar, setEditSheetOpen,
+  setClienteParaDesativar, setDesativarSheetOpen
 }: DeliveryCardProps) => {
   const visualDiasSemAtendimento = statusData?.checkInStatus ? 0 : (delivery.diasSemAtendimento ?? 0);
   const visualDiasSemConsumo = statusData?.hadSale ? 0 : (delivery.diasSemConsumo ?? 0);
@@ -245,13 +252,21 @@ const MemoizedDeliveryCard = memo(({
         )}
 
         {checkInStatus && (
-          <div className="pt-2 border-t">
-            <div className={`flex items-center justify-center p-3 rounded-lg ${checkInStatus.color}`}>
+          <div className="pt-2 border-t space-y-2">
+            <div
+              className={`flex items-center justify-center p-3 rounded-lg ${checkInStatus.color}`}
+            >
               {(() => {
                 const StatusIcon = checkInStatus.icon;
-                return <StatusIcon className={`w-4 h-4 ${checkInStatus.textColor} mr-2`} />;
+                return (
+                  <StatusIcon
+                    className={`w-4 h-4 ${checkInStatus.textColor} mr-2`}
+                  />
+                );
               })()}
-              <span className={`text-sm font-medium ${checkInStatus.textColor}`}>
+              <span
+                className={`text-sm font-medium ${checkInStatus.textColor}`}
+              >
                 {checkInStatus.label}
               </span>
               {statusData?.hadSale && (
@@ -262,12 +277,52 @@ const MemoizedDeliveryCard = memo(({
                 size="sm"
                 className="ml-auto h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={(e) => {
-                  e.stopPropagation();
-                  setDeliveryParaDescartar(delivery);
-                  setDescarteSheetOpen(true);
+                   e.stopPropagation();
+                   setDeliveryParaDescartar(delivery);
+                   setDescarteSheetOpen(true);
                 }}
               >
                 Descartar
+              </Button>
+            </div>
+
+            {/* Ações pós-checkin */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs text-amber-700 border-amber-200 hover:bg-amber-50 h-8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const original = clientesRota.find(
+                    (c: any) => c.cliente.id === delivery.clienteId,
+                  );
+                  if (original) {
+                    setClienteParaEditar(original);
+                    setEditSheetOpen(true);
+                  }
+                }}
+              >
+                <Edit className="w-3.5 h-3.5 mr-1" />
+                Editar Cliente
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs text-red-700 border-red-200 hover:bg-red-50 h-8"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const original = clientesRota.find(
+                    (c: any) => c.cliente.id === delivery.clienteId,
+                  );
+                  if (original) {
+                    setClienteParaDesativar(original);
+                    setDesativarSheetOpen(true);
+                  }
+                }}
+              >
+                <UserX className="w-3.5 h-3.5 mr-1" />
+                Desativar Cliente
               </Button>
             </div>
           </div>
@@ -275,11 +330,14 @@ const MemoizedDeliveryCard = memo(({
       </CardContent>
     </Card>
   );
-}, (prevProps, nextProps) => {
+},
+(prevProps, nextProps) => {
   return (
     prevProps.delivery.id === nextProps.delivery.id &&
+    prevProps.delivery.tipoCliente === nextProps.delivery.tipoCliente &&
     prevProps.checkInStatus?.label === nextProps.checkInStatus?.label &&
-    prevProps.statusData?.checkInStatus === nextProps.statusData?.checkInStatus &&
+    prevProps.statusData?.checkInStatus ===
+      nextProps.statusData?.checkInStatus &&
     prevProps.statusData?.hadSale === nextProps.statusData?.hadSale &&
     prevProps.statusData?.reposicaoQty === nextProps.statusData?.reposicaoQty
   );
@@ -705,6 +763,11 @@ export function RouteDetails({ route, deliveryStatuses, onBack, onCheckIn, onOpe
                   setSelectedDelivery(d);
                   setActionsSheetOpen(true);
                 }}
+                clientesRota={clientesRota}
+                setClienteParaEditar={setClienteParaEditar}
+                setEditSheetOpen={setEditSheetOpen}
+                setClienteParaDesativar={setClienteParaDesativar}
+                setDesativarSheetOpen={setDesativarSheetOpen}
               />
             );
           })
