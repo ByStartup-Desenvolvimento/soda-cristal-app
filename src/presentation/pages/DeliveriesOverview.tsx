@@ -31,6 +31,7 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId
     selectRota,
     hasHydratedFromStorage,
     offlineModeHint,
+    lastFetchDate,
   } = useRotasStore();
   const isOnline = useNetworkStore(s => s.isOnline);
 
@@ -40,9 +41,13 @@ export function DeliveriesOverview({ deliveryStatuses, onSelectRoute, vendedorId
     if (!hasHydratedFromStorage) return;
     if (isSyncing) return;
     if (isLoading) return;
-    if (clientesRota.length > 0) return;
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const alreadyFetchedToday = lastFetchDate === todayStr;
+    if (clientesRota.length > 0 || alreadyFetchedToday) return;
+
     loadTodaysRoutes(vendedorId);
-  }, [vendedorId, loadTodaysRoutes, hasHydratedFromStorage, isSyncing, isLoading, clientesRota.length]);
+  }, [vendedorId, loadTodaysRoutes, hasHydratedFromStorage, isSyncing, isLoading, clientesRota.length, lastFetchDate]);
 
   const showOfflineBanner =
     Boolean(offlineModeHint) ||
