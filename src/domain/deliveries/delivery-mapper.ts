@@ -31,7 +31,7 @@ export const mapClienteToDelivery = (item: RotaEntregaCompleta): Delivery => {
     orderCode: `SCT-${item.cliente.id}`,
     customerName: item.cliente.nome,
     customerPhone: item.cliente.celular || item.cliente.celular2 || '',
-    address: `${item.cliente.rua}, ${item.cliente.numero} - ${item.cliente.bairro}`,
+    address: `${item.cliente.rua}, ${item.cliente.numero}${item.cliente.complemento ? ` - ${item.cliente.complemento}` : ''} - ${item.cliente.bairro}`,
     bottles: {
       quantity: item.rotaentrega.num_garrafas || 0,
       size: '1,5 L'
