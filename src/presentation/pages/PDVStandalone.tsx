@@ -12,7 +12,6 @@ import {
 } from "../../shared/ui/select";
 import {
   Search,
-  ShoppingCart,
   Plus,
   Minus,
   User,
@@ -35,6 +34,8 @@ import { getPrecoByTipoCliente } from "../../domain/produtos/precoPorTipoCliente
 import { checkInService } from "../../domain/checkin/services";
 import { formatCheckInApiDate } from "../../shared/utils/formatters";
 import { CheckInStatus } from "../../domain/deliveries/models";
+import { promocoesService } from "../../domain/promocoes/services";
+import { Promocao } from "../../domain/promocoes/models";
 
 interface CartItem {
   product: Produto;
@@ -99,6 +100,10 @@ export function PDVStandalone({
   const [meiosPagamento, setMeiosPagamento] = useState<MeioPagamento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [promocoes, setPromocoes] = useState<Promocao[]>([]);
+  const [promocaoAplicada, setPromocaoAplicada] = useState<Promocao | null>(null);
+  const [totalDesconto, setTotalDesconto] = useState<number>(0);
+
   const { vendedorId, distribuidorId } = useUserStore(
     useShallow((state) => ({
       vendedorId: state.vendedorId,
@@ -124,10 +129,19 @@ export function PDVStandalone({
             await pagamentosService.getMeiosPagamento(distribuidorId);
           setMeiosPagamento(pagamentosData);
         }
+
+        if (vendedorId) {
+          try {
+            const promocoesData = await promocoesService.getPromocoes(vendedorId);
+            setPromocoes(promocoesData);
+          } catch (promoErr) {
+            console.error("Erro ao carregar promoções:", promoErr);
+          }
+        }
       } catch (error) {
         console.error("Erro ao carregar dados do PDV:", error);
         toast.error(
-          "Erro ao carregar produtos ou meios de pagamento. Verifique sua conexão.",
+          "Erro ao carregar produtos, meios de pagamento ou promoções. Verifique sua conexão.",
         );
       } finally {
         setIsLoading(false);
@@ -136,6 +150,11 @@ export function PDVStandalone({
 
     loadData();
   }, [vendedorId, distribuidorId]);
+
+  useEffect(() => {
+    setPromocaoAplicada(null);
+    setTotalDesconto(0);
+  }, [cart]);
 
   const addToCart = (product: Produto) => {
     setCart((prev) => {
@@ -189,16 +208,57 @@ export function PDVStandalone({
     return getPrecoByTipoCliente(product, tipoCliente);
   };
 
-  const getTotal = () => {
+  const getSubtotal = () => {
     return cart.reduce(
       (total, item) => total + getProductPrice(item.product) * item.quantity,
       0,
     );
   };
 
+  const getTotalComDesconto = () => {
+    return Math.max(0, getSubtotal() - totalDesconto);
+  };
+
+  const getTotal = () => {
+    return getTotalComDesconto();
+  };
+
   const getCartItemQuantity = (productId: number) => {
     const item = cart.find((item) => item.product.id === productId);
     return item ? item.quantity : 0;
+  };
+
+  const handleCalcularDesconto = () => {
+    if (cart.length === 0) {
+      toast.error("Adicione itens ao carrinho primeiro");
+      return;
+    }
+
+    const mappedCart = cart.map((item) => ({
+      product: {
+        id: item.product.id,
+        categoria: item.product.categoria,
+      },
+      quantity: item.quantity,
+    }));
+
+    const { promo, totalDesconto: calculado } = promocoesService.calcularDesconto(
+      mappedCart,
+      promocoes,
+      tipoCliente
+    );
+
+    if (promo && calculado > 0) {
+      setPromocaoAplicada(promo);
+      setTotalDesconto(calculado);
+      toast.success(
+        `Promoção "${promo.descricao}" aplicada! Desconto de R$ ${calculado.toFixed(2)}`
+      );
+    } else {
+      setPromocaoAplicada(null);
+      setTotalDesconto(0);
+      toast.info("Nenhuma promoção elegível encontrada para este carrinho.");
+    }
   };
 
   const handleFinalizeSale = async () => {
@@ -225,6 +285,23 @@ export function PDVStandalone({
     setIsProcessing(true);
 
     try {
+      // Calcular distribuição de descontos por produto
+      let descontosPorItem: Record<number, number> = {};
+      if (promocaoAplicada && totalDesconto > 0) {
+        const mappedCart = cart.map((item) => ({
+          product: {
+            id: item.product.id,
+            categoria: item.product.categoria,
+          },
+          quantity: item.quantity,
+        }));
+        descontosPorItem = promocoesService.distribuirDesconto(
+          mappedCart,
+          promocaoAplicada,
+          totalDesconto
+        );
+      }
+
       // Construir payload conforme especificação da API
       // Ref: POST /vendaxarope/v2
       const venda: Venda = {
@@ -232,7 +309,7 @@ export function PDVStandalone({
         cliente_id: Number(delivery?.id) || 0, // Se tiver delivery context, senão 0
         data_venda: new Date().toISOString().replace("T", " ").slice(0, 19), // Formato: yyyy-MM-dd HH:mm:ss
         vendedor: vendedorId,
-        promocao_id: "", // Obrigatório string vazia se não tiver
+        promocao_id: promocaoAplicada ? String(promocaoAplicada.id) : "", // ID da promoção aplicada ou string vazia
         venda_item: cart.map((item, idx) => ({
           id: idx + 1, // ID temporário sequencial
           produto_id: item.product.id,
@@ -240,7 +317,7 @@ export function PDVStandalone({
           venda_id: Date.now(),
           valor_unitario: getProductPrice(item.product), // API espera number
           unidade_medida: "UN",
-          desconto: 0,
+          desconto: descontosPorItem[item.product.id] || 0,
           acrescimo: 0,
         })),
         contas_receber: {
@@ -312,6 +389,9 @@ export function PDVStandalone({
             <strong>Venda realizada com sucesso!</strong>
           </p>
           <p>Cliente: {customerName}</p>
+          {promocaoAplicada && (
+            <p className="text-green-600 font-medium">Promoção: {promocaoAplicada.descricao}</p>
+          )}
           <p>Total: R$ {getTotal().toFixed(2)}</p>
         </div>,
       );
@@ -558,16 +638,56 @@ export function PDVStandalone({
       {cart.length > 0 && (
         <div className="sticky bottom-16 left-0 right-0 bg-white border-t border-border p-4 shadow-lg">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <ShoppingCart className="w-5 h-5 text-blue-600" />
-                <span className="font-medium">
-                  {cart.reduce((total, item) => total + item.quantity, 0)} itens
-                </span>
+            {/* Promoção Aplicada ou Botão de Aplicar */}
+            {tipoCliente === "normal" && promocoes.length > 0 && (
+              <div className="flex items-center justify-between gap-2 border-b pb-2 mb-2">
+                <span className="text-sm font-medium text-muted-foreground">Promoção:</span>
+                {promocaoAplicada ? (
+                  <div className="flex items-center gap-1.5">
+                    <Badge className="bg-green-600 text-white text-xs">
+                      {promocaoAplicada.descricao}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-red-500 hover:text-red-700 text-xs font-semibold"
+                      onClick={() => {
+                        setPromocaoAplicada(null);
+                        setTotalDesconto(0);
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 border-green-600 text-green-700 hover:bg-green-50 text-xs"
+                    onClick={handleCalcularDesconto}
+                  >
+                    Aplicar Desconto
+                  </Button>
+                )}
               </div>
-              <span className="text-lg font-bold text-green-600">
-                R$ {getTotal().toFixed(2)}
-              </span>
+            )}
+
+            {/* Resumo de Valores */}
+            <div className="space-y-1.5 border-b pb-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium">R$ {getSubtotal().toFixed(2)}</span>
+              </div>
+              {totalDesconto > 0 && (
+                <div className="flex justify-between text-sm text-green-600 font-semibold">
+                  <span>Desconto de Promoção:</span>
+                  <span>- R$ {totalDesconto.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-bold">
+                <span>Total:</span>
+                <span className="text-green-600">R$ {getTotal().toFixed(2)}</span>
+              </div>
             </div>
 
             <Button
