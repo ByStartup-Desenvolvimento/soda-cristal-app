@@ -36,7 +36,7 @@ export const useDeliveryStore = create<DeliveryState>()(
             clearDeliveryStatuses: () => set({ deliveryStatuses: {} }),
             cleanupOldStatuses: () => set((state) => {
                 const now = new Date().getTime();
-                const EXPIRE_TIME = 20 * 60 * 60 * 1000; // 20 horas
+                const EXPIRE_TIME = 12 * 60 * 60 * 1000; // 12 horas
                 const newStatuses = { ...state.deliveryStatuses };
                 let hasChanged = false;
 
