@@ -238,6 +238,7 @@ export function PDVStandalone({
       product: {
         id: item.product.id,
         categoria: item.product.categoria,
+        descricao: item.product.descricao,
       },
       quantity: item.quantity,
     }));
@@ -292,6 +293,7 @@ export function PDVStandalone({
           product: {
             id: item.product.id,
             categoria: item.product.categoria,
+            descricao: item.product.descricao,
           },
           quantity: item.quantity,
         }));

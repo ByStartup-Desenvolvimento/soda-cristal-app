@@ -6,6 +6,7 @@ export interface CartItem {
   product: {
     id: number;
     categoria?: string;
+    descricao?: string;
   };
   quantity: number;
 }
@@ -31,7 +32,11 @@ export const promocoesService = {
       return { promo: null, totalDesconto: 0 };
     }
 
-    const xaropeItems = cart.filter(item => item.product.id >= 0);
+    const xaropeItems = cart.filter(
+      item =>
+        item.product.id >= 0 &&
+        !(item.product.descricao?.toUpperCase().includes("CAIXA MIX"))
+    );
     const totalXaropes = xaropeItems.reduce((acc, item) => acc + item.quantity, 0);
 
     if (totalXaropes === 0) {
@@ -79,7 +84,11 @@ export const promocoesService = {
     promo: Promocao,
     totalDesconto: number
   ): Record<number, number> {
-    const xaropeItems = cart.filter(item => item.product.id >= 0);
+    const xaropeItems = cart.filter(
+      item =>
+        item.product.id >= 0 &&
+        !(item.product.descricao?.toUpperCase().includes("CAIXA MIX"))
+    );
     const totalXaropes = xaropeItems.reduce((acc, item) => acc + item.quantity, 0);
     const descontosPorItem: Record<number, number> = {};
 
