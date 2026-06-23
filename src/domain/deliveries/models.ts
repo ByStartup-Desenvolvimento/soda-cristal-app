@@ -10,6 +10,7 @@ export interface Delivery {
     orderCode: string;
     customerName: string;
     customerPhone: string;
+    customerPhone2?: string;
     address: string;
     bottles: {
         quantity: number;

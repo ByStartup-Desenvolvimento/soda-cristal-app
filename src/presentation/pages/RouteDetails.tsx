@@ -208,6 +208,31 @@ const MemoizedDeliveryCard = memo(({
           )}
         </div>
 
+        {delivery.customerPhone2 && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Phone className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {formatPhone(delivery.customerPhone2)} <span className="text-xs text-muted-foreground/70">(Opcional)</span>
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (delivery.customerPhone2) {
+                  handleWhatsApp(delivery.customerPhone2);
+                }
+              }}
+            >
+              <MessageCircle className="w-4 h-4 mr-1" />
+              <span className="text-xs">WhatsApp</span>
+            </Button>
+          </div>
+        )}
+
         <div className="flex items-center space-x-2">
           <Droplets className="w-4 h-4 text-blue-500" />
           <span className="text-sm font-medium">
@@ -334,6 +359,12 @@ const MemoizedDeliveryCard = memo(({
 (prevProps, nextProps) => {
   return (
     prevProps.delivery.id === nextProps.delivery.id &&
+    prevProps.delivery.customerName === nextProps.delivery.customerName &&
+    prevProps.delivery.customerPhone === nextProps.delivery.customerPhone &&
+    prevProps.delivery.customerPhone2 === nextProps.delivery.customerPhone2 &&
+    prevProps.delivery.address === nextProps.delivery.address &&
+    prevProps.delivery.notes === nextProps.delivery.notes &&
+    prevProps.delivery.bottles.quantity === nextProps.delivery.bottles.quantity &&
     prevProps.delivery.tipoCliente === nextProps.delivery.tipoCliente &&
     prevProps.checkInStatus?.label === nextProps.checkInStatus?.label &&
     prevProps.statusData?.checkInStatus ===
