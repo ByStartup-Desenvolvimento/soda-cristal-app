@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatório de Testes Manuais — Soda Cristal Tech App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-page: #0f1117;
+      --bg-card: #1a1d27;
+      --bg-card2: #20233a;
+      --border: #2a2f4a;
+      --accent: #6c63ff;
+      --accent-light: #8b85ff;
+      --accent-glow: rgba(108, 99, 255, 0.15);
+      --pass: #22c55e;
+      --fail: #ef4444;
+      --block: #f59e0b;
+      --pending: #94a3b8;
+      --text-primary: #e2e8f0;
+      --text-muted: #8892a4;
+      --radius: 12px;
+      --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── LIGHTBOX ── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.92);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox-close {
+      position: absolute;
+      top: 1.5rem; right: 2rem;
+      font-size: 2rem;
+      cursor: pointer;
+      color: #fff;
+      line-height: 1;
+      opacity: .8;
+      transition: opacity .2s;
+    }
+    #lightbox-close:hover { opacity: 1; }
+    #lightbox-img {
+      max-width: 90vw;
+      max-height: 88vh;
+      border-radius: 10px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.6);
+      object-fit: contain;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: .9rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: .9rem;
+    }
+    .logo-dot {
+      width: 2.4rem; height: 2.4rem;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .topbar-brand h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .topbar-brand span {
+      font-size: .75rem;
+      color: var(--text-muted);
+    }
+    .badge-version {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: var(--accent-light);
+      font-size: .72rem;
+      font-weight: 600;
+      padding: .3rem .8rem;
+      border-radius: 20px;
+      letter-spacing: .4px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(160deg, #12142a 0%, #0f1117 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 2rem 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(108,99,255,.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner { max-width: 900px; margin: 0 auto; }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: var(--accent-light);
+      font-size: .72rem;
+      font-weight: 600;
+      padding: .3rem .8rem;
+      border-radius: 20px;
+      margin-bottom: 1rem;
+      letter-spacing: .5px;
+    }
+    .hero h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: .5rem;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      color: var(--text-muted);
+      font-size: .95rem;
+      margin-bottom: 2rem;
+      max-width: 620px;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    .hero-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: .2rem;
+    }
+    .hero-meta-item label {
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .hero-meta-item span {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* ── CONTAINER ── */
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── SCOREBOARD ── */
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .score-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .35rem;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .score-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+    .score-card.total { border-top: 3px solid var(--accent); }
+    .score-card.pass  { border-top: 3px solid var(--pass); }
+    .score-card.fail  { border-top: 3px solid var(--fail); }
+    .score-card.block { border-top: 3px solid var(--block); }
+    .score-card.pct   { border-top: 3px solid var(--accent-light); }
+    .score-icon { font-size: 1.3rem; }
+    .score-num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .score-label {
+      font-size: .72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    /* ── PROGRESS ── */
+    .progress-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .progress-section h3 {
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .progress-bar-wrap {
+      background: rgba(255,255,255,.05);
+      border-radius: 99px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: .6rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--pass));
+      border-radius: 99px;
+      transition: width .6s cubic-bezier(.4,0,.2,1);
+    }
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: .72rem;
+      color: var(--text-muted);
+    }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      padding-bottom: .6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title .icon {
+      width: 2rem; height: 2rem;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .9rem;
+    }
+
+    /* ── FLOW BLOCK ── */
+    .flow-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+      transition: box-shadow .2s;
+    }
+    .flow-block:hover { box-shadow: 0 4px 20px rgba(0,0,0,.25); }
+    .flow-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.3rem;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+      transition: background .15s;
+    }
+    .flow-header:hover { background: rgba(108,99,255,.06); }
+    .flow-block.open .flow-header { border-bottom-color: var(--border); }
+    .flow-header-left { display: flex; align-items: center; gap: .8rem; }
+    .flow-id {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      color: var(--accent-light);
+      font-size: .7rem;
+      font-weight: 700;
+      padding: .2rem .6rem;
+      border-radius: 6px;
+      letter-spacing: .5px;
+    }
+    .flow-title { font-size: .95rem; font-weight: 600; }
+    .flow-chevron {
+      font-size: .7rem;
+      color: var(--text-muted);
+      transition: transform .25s;
+    }
+    .flow-block.open .flow-chevron { transform: rotate(180deg); }
+    .flow-body {
+      display: none;
+      padding: 1.3rem;
+    }
+    .flow-block.open .flow-body { display: block; }
+
+    /* ── TABLE ── */
+    .test-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+      margin-bottom: 1.4rem;
+    }
+    .test-table thead tr {
+      background: rgba(108,99,255,.08);
+      border-bottom: 1px solid var(--border);
+    }
+    .test-table th {
+      padding: .7rem .9rem;
+      text-align: left;
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .test-table td {
+      padding: .75rem .9rem;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(42,47,74,.6);
+      color: var(--text-primary);
+      font-size: .83rem;
+    }
+    .test-table tbody tr:hover { background: rgba(255,255,255,.02); }
+    .test-table tbody tr:last-child td { border-bottom: none; }
+    .tc-code {
+      font-weight: 700;
+      color: var(--accent-light);
+      white-space: nowrap;
+      font-size: .78rem;
+    }
+
+    /* ── STATUS BADGE ── */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .25rem .65rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status.dot::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status.pass   { background: rgba(34,197,94,.12); color: var(--pass); border: 1px solid rgba(34,197,94,.3); }
+    .status.pass.dot::before { background: var(--pass); }
+    .status.fail   { background: rgba(239,68,68,.12); color: var(--fail); border: 1px solid rgba(239,68,68,.3); }
+    .status.fail.dot::before { background: var(--fail); }
+    .status.block  { background: rgba(245,158,11,.12); color: var(--block); border: 1px solid rgba(245,158,11,.3); }
+    .status.block.dot::before { background: var(--block); }
+    .status.pending{ background: rgba(148,163,184,.1); color: var(--pending); border: 1px solid rgba(148,163,184,.25); }
+    .status.pending.dot::before { background: var(--pending); }
+
+    /* ── EVIDENCE ── */
+    .evidence-section { margin-bottom: 1rem; }
+    .evidence-section h4 {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: .8rem;
+    }
+    .evidence-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .8rem;
+    }
+    .evidence-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+      width: 130px; height: 100px;
+      background: var(--bg-card2);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: .72rem;
+      text-align: center;
+      padding: .5rem;
+    }
+    .evidence-placeholder span { font-size: 1.5rem; }
+    .evidence-item {
+      cursor: pointer;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .evidence-item:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .evidence-item img { display: block; width: 130px; height: 100px; object-fit: cover; }
+    .evidence-caption {
+      background: var(--bg-card2);
+      padding: .3rem .5rem;
+      font-size: .65rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* ── OBS BOX ── */
+    .obs-box {
+      background: var(--bg-card2);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: .9rem 1.1rem;
+      font-size: .83rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .obs-box strong { color: var(--text-primary); display: block; margin-bottom: .3rem; }
+
+    /* ── BUG CARD ── */
+    .bug-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .bug-card.critical { border-left: 4px solid var(--fail); }
+    .bug-card.high     { border-left: 4px solid #f97316; }
+    .bug-card.medium   { border-left: 4px solid var(--block); }
+    .bug-card.low      { border-left: 4px solid var(--pending); }
+    .bug-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.3rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .bug-id {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--fail);
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      padding: .2rem .6rem;
+      border-radius: 6px;
+      margin-right: .6rem;
+    }
+    .bug-title { font-weight: 600; font-size: .9rem; display: inline; }
+    .severity {
+      font-size: .7rem;
+      font-weight: 700;
+      padding: .25rem .7rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .severity.critical { background: rgba(239,68,68,.15); color: var(--fail); border: 1px solid rgba(239,68,68,.3); }
+    .severity.high     { background: rgba(249,115,22,.15); color: #f97316; border: 1px solid rgba(249,115,22,.3); }
+    .severity.medium   { background: rgba(245,158,11,.15); color: var(--block); border: 1px solid rgba(245,158,11,.3); }
+    .severity.low      { background: rgba(148,163,184,.1); color: var(--pending); border: 1px solid rgba(148,163,184,.3); }
+    .bug-body {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 0;
+      padding: 1rem 1.3rem;
+      font-size: .83rem;
+    }
+    .bug-body dt {
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      padding: .5rem 0;
+      border-bottom: 1px solid rgba(42,47,74,.5);
+    }
+    .bug-body dd {
+      color: var(--text-primary);
+      padding: .5rem 0;
+      border-bottom: 1px solid rgba(42,47,74,.5);
+    }
+    .bug-body dt:last-of-type,
+    .bug-body dd:last-of-type { border-bottom: none; }
+    .empty-bugs {
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: .88rem;
+    }
+
+    /* ── MATRIX TABLE ── */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .matrix-table thead tr { background: rgba(108,99,255,.1); }
+    .matrix-table th {
+      padding: .75rem 1rem;
+      text-align: left;
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .matrix-table td {
+      padding: .7rem 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    .matrix-table tbody tr:hover { background: rgba(255,255,255,.02); }
+    .matrix-table tfoot td {
+      font-weight: 700;
+      background: rgba(108,99,255,.06);
+      border-top: 2px solid var(--border);
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: .78rem;
+    }
+    .footer strong { color: var(--accent-light); }
+
+    @media (max-width: 640px) {
+      .hero h2 { font-size: 1.4rem; }
+      .scoreboard { grid-template-columns: repeat(2, 1fr); }
+      .bug-body { grid-template-columns: 1fr; }
+      .bug-body dt { border-bottom: none; padding-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LIGHTBOX -->
+  <div id="lightbox">
+    <span id="lightbox-close" onclick="closeLightbox()">&#x2715;</span>
+    <img id="lightbox-img" src="" alt="Evidência ampliada" />
+  </div>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="logo-dot">🎯</div>
+      <div>
+        <h1>Soda Cristal Tech App</h1>
+        <span>Relatório de Testes Manuais — POP-QA-001</span>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span class="badge-version">v1.0 — Ciclo 1</span>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-tag">📋 QA Report</div>
+      <h2>Relatório de Testes Manuais</h2>
+      <p>Validação funcional dos fluxos principais do aplicativo de gestão de entregas e vendas para distribuidores Soda Cristal. Cobertura de 8 fluxos críticos com 35 casos de teste.</p>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <label>Projeto</label>
+          <span>Soda Cristal Tech App</span>
+        </div>
+        <div class="hero-meta-item">
+          <label>Plataforma</label>
+          <span>📱 Mobile (WebView Android)</span>
+        </div>
+        <div class="hero-meta-item">
+          <label>Ambiente</label>
+          <span>Produção / Homologação</span>
+        </div>
+        <div class="hero-meta-item">
+          <label>Executor</label>
+          <span id="meta-executor">—</span>
+        </div>
+        <div class="hero-meta-item">
+          <label>Data</label>
+          <span id="meta-data">—</span>
+        </div>
+        <div class="hero-meta-item">
+          <label>Versão App</label>
+          <span>30.19.2</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="container">
+
+    <!-- SCOREBOARD -->
+    <div class="scoreboard" id="scoreboard">
+      <div class="score-card total">
+        <div class="score-icon">🧪</div>
+        <div class="score-num" id="sc-total">0</div>
+        <div class="score-label">Total de Casos</div>
+      </div>
+      <div class="score-card pass">
+        <div class="score-icon">✅</div>
+        <div class="score-num" id="sc-pass">0</div>
+        <div class="score-label">Aprovados</div>
+      </div>
+      <div class="score-card fail">
+        <div class="score-icon">❌</div>
+        <div class="score-num" id="sc-fail">0</div>
+        <div class="score-label">Reprovados</div>
+      </div>
+      <div class="score-card block">
+        <div class="score-icon">⚠️</div>
+        <div class="score-num" id="sc-block">0</div>
+        <div class="score-label">Bloqueados</div>
+      </div>
+      <div class="score-card pct">
+        <div class="score-icon">📊</div>
+        <div class="score-num" id="sc-pct">—</div>
+        <div class="score-label">Taxa de Aprovação</div>
+      </div>
+    </div>
+
+    <!-- BARRA DE PROGRESSO -->
+    <div class="progress-section">
+      <h3>Progresso geral de aprovação</h3>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
+      </div>
+      <div class="progress-labels">
+        <span>0%</span>
+        <span id="progress-pct-label">0%</span>
+      </div>
+    </div>
+
+    <!-- CASOS DE TESTE -->
+    <div class="section-title">
+      <div class="icon">🧪</div>
+      Casos de Teste por Fluxo
+    </div>
+
+    <!-- ════════════════════════════════════ FL-01 ════ -->
+    <div class="flow-block open" id="flow-fl01">
+      <div class="flow-header" onclick="toggleFlow('flow-fl01')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-01</span>
+          <span class="flow-title">Autenticação — Login e Logout</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-01</td>
+              <td>Login com credenciais válidas</td>
+              <td>App aberto na tela de login; usuário com conta ativa no sistema</td>
+              <td>Usuário autenticado com sucesso, redirecionado para tela de Entregas (/deliveries); BottomNavigation visível</td>
+              <td><span class="status pass dot">Aprovado</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-02</td>
+              <td>Login com senha incorreta</td>
+              <td>App aberto na tela de login</td>
+              <td>Exibição de mensagem de erro clara; usuário permanece na tela de login; nenhum dado salvo no localStorage</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-03</td>
+              <td>Login com campos em branco</td>
+              <td>App aberto na tela de login</td>
+              <td>Validação impede envio; campos destacados como obrigatórios; nenhuma requisição à API é feita</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-04</td>
+              <td>Sessão com token expirado — redirecionamento automático</td>
+              <td>Usuário logado; token JWT expirado artificialmente no localStorage</td>
+              <td>App detecta token inválido na inicialização, limpa o localStorage e exibe a tela de Login automaticamente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-05</td>
+              <td>Logout via botão "Sair" no menu inferior</td>
+              <td>Usuário autenticado e na tela principal</td>
+              <td>Sessão encerrada, localStorage limpo (auth_token, vendedorId, user removidos); app retorna à tela de Login</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl01">
+            <div class="evidence-item" onclick="openLightbox('evidencias/tc01-login-sucesso.png')">
+              <img src="evidencias/tc01-login-sucesso.png" alt="TC-01 — Login com credenciais válidas"
+                onerror="this.style.display='none';this.parentElement.querySelector('.evidence-caption').textContent='📷 TC-01 (imagem na pasta evidencias/)';" />
+              <div class="evidence-caption">TC-01 — Login Sucesso ✅</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. Verificar se a mensagem de erro do TC-02 é exibida via toast (Sonner) ou inline no formulário.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ FL-02 ════ -->
+    <div class="flow-block open" id="flow-fl02">
+      <div class="flow-header" onclick="toggleFlow('flow-fl02')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-02</span>
+          <span class="flow-title">Entregas — Visão Geral do Dia</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-06</td>
+              <td>Exibição da lista de entregas do dia</td>
+              <td>Usuário autenticado; rota acessada via /deliveries</td>
+              <td>Lista de entregas do dia carregada e exibida em cards com: nome do cliente, endereço, status e quantidade de garrafas</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-07</td>
+              <td>Filtro por status de entrega</td>
+              <td>Usuário na tela de Entregas com lista carregada</td>
+              <td>Ao selecionar filtro (ex.: "Pendente"), apenas entregas com aquele status são exibidas na lista</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-08</td>
+              <td>Seleção de entrega e navegação para detalhes da rota</td>
+              <td>Usuário na tela de Entregas; pelo menos uma entrega listada</td>
+              <td>Ao clicar em uma entrega, o app navega para /routes/details exibindo os clientes da rota correspondente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-09</td>
+              <td>Exibição correta de badges de status das entregas</td>
+              <td>Usuário na tela de Entregas com entregas em diferentes status</td>
+              <td>Cada card exibe o badge de status correto (ex.: Pendente, Entregue, Ausente) com cor diferenciada</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl02">
+            <div class="evidence-placeholder">
+              <span>📷</span>
+              Screenshots serão adicionados após execução
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. Atenção: o domínio Deliveries usa dados parcialmente mockados. Verificar se a integração com a API está ativa no ambiente de teste.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ FL-03 ════ -->
+    <div class="flow-block open" id="flow-fl03">
+      <div class="flow-header" onclick="toggleFlow('flow-fl03')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-03</span>
+          <span class="flow-title">Rotas — Lista e Detalhes</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-10</td>
+              <td>Carregamento da lista de rotas do vendedor</td>
+              <td>Usuário autenticado; tela de Rotas acessada via BottomNavigation</td>
+              <td>Rotas ativas do vendedor carregadas da API (/rotas/{vendedor_id}) e exibidas em cards com nome, frequência e status</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-11</td>
+              <td>Seleção de rota e navegação para detalhes</td>
+              <td>Usuário na tela de Rotas com lista carregada</td>
+              <td>Ao selecionar uma rota, navega para /routes/details exibindo a lista de clientes na sequência correta</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-12</td>
+              <td>Listagem de clientes por rota com sequência correta</td>
+              <td>Usuário na tela de detalhes de uma rota</td>
+              <td>Clientes exibidos em ordem de sequência definida na rota; cards mostram nome, endereço, perfil e status do dia</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-13</td>
+              <td>Ação de GPS — abre Google Maps com coordenadas do cliente</td>
+              <td>Usuário na tela de detalhes de rota; cliente possui lat/lng cadastrados</td>
+              <td>Ao clicar no botão de GPS de um cliente, o Google Maps é aberto com as coordenadas corretas do endereço</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-14</td>
+              <td>Exibição de estatísticas da rota (totais)</td>
+              <td>Usuário na tela de detalhes de uma rota com clientes carregados</td>
+              <td>Totalizadores visíveis (ex.: total de clientes, pendentes, garrafas) calculados corretamente com base nos dados da rota</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl03">
+            <div class="evidence-placeholder">
+              <span>📷</span>
+              Screenshots serão adicionados após execução
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. Para o TC-13, testar em dispositivo físico Android para validar a abertura do Google Maps.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ FL-04 ════ -->
+    <div class="flow-block open" id="flow-fl04">
+      <div class="flow-header" onclick="toggleFlow('flow-fl04')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-04</span>
+          <span class="flow-title">Check-in — Registro de Visita</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-15</td>
+              <td>Registrar check-in com status "Entregue"</td>
+              <td>Usuário na tela de Check-in (/checkin) com cliente selecionado via rota</td>
+              <td>Status "Entregue" selecionado; formulário de confirmação exibido; ao confirmar, status do cliente atualizado na UI</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-16</td>
+              <td>Registrar check-in com status "Ausente — Retornar"</td>
+              <td>Usuário na tela de Check-in com cliente selecionado</td>
+              <td>Status "Ausente — Retornar" registrado; cliente marcado para retorno na rota; observação opcional aceita</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-17</td>
+              <td>Registrar check-in com status "Recusou"</td>
+              <td>Usuário na tela de Check-in com cliente selecionado</td>
+              <td>Status "Recusou" registrado corretamente; cliente marcado como recusa na UI da rota</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-18</td>
+              <td>Redirecionamento para PDV após check-in com venda</td>
+              <td>Usuário na tela de Check-in; opção "houve venda" selecionada</td>
+              <td>Após confirmar check-in com venda, app navega automaticamente para /pdv/delivery com o cliente pré-selecionado</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-19</td>
+              <td>Captura de localização GPS no check-in</td>
+              <td>Usuário na tela de Check-in; permissão de localização concedida no dispositivo</td>
+              <td>Coordenadas GPS capturadas automaticamente ou manualmente; exibidas na tela antes da confirmação</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl04">
+            <div class="evidence-placeholder">
+              <span>📷</span>
+              Screenshots serão adicionados após execução
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. ⚠️ O POST para a API de check-in (/checkin/{vendedor_id}) está parcialmente integrado — verificar se os dados chegam ao backend.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ FL-05 ════ -->
+    <div class="flow-block open" id="flow-fl05">
+      <div class="flow-header" onclick="toggleFlow('flow-fl05')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-05</span>
+          <span class="flow-title">Clientes — Lista, Histórico e Cadastro</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-20</td>
+              <td>Carregamento da lista de clientes</td>
+              <td>Usuário autenticado; tela de Clientes acessada via BottomNavigation</td>
+              <td>Clientes ativos do vendedor carregados da API (/clientes/xarope/{vendedor_id}); exibidos em lista com nome, telefone e última entrega</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-21</td>
+              <td>Busca de cliente por nome</td>
+              <td>Usuário na lista de clientes com dados carregados</td>
+              <td>Campo de busca filtra a lista em tempo real pelo nome ou razão social do cliente (busca local, sem nova requisição à API)</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-22</td>
+              <td>Busca de cliente por telefone</td>
+              <td>Usuário na lista de clientes com dados carregados</td>
+              <td>Campo de busca filtra clientes pelo número de telefone (parcial ou completo); resultado exibido corretamente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-23</td>
+              <td>Busca de cliente por endereço (rua/bairro)</td>
+              <td>Usuário na lista de clientes com dados carregados</td>
+              <td>Campo de busca filtra por rua ou bairro; clientes correspondentes exibidos na lista filtrada</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-24</td>
+              <td>Navegação para histórico de compras de um cliente</td>
+              <td>Usuário na lista de clientes; pelo menos um cliente selecionável</td>
+              <td>Ao clicar em "Ver Histórico", app navega para /customers/history exibindo compras anteriores do cliente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-25</td>
+              <td>Preenchimento do formulário de cadastro de novo cliente</td>
+              <td>Usuário acessa /customers/new via botão "Cadastrar Novo"</td>
+              <td>Formulário exibido com todos os campos necessários; busca de CEP via ViaCEP preenche campos de endereço automaticamente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-26</td>
+              <td>Envio de cadastro de novo cliente</td>
+              <td>Formulário de cadastro preenchido com dados válidos</td>
+              <td>Dados enviados via POST /contratos/v2/cadastro-de-clientes; toast de sucesso exibido; cliente aparece na lista</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl05">
+            <div class="evidence-placeholder">
+              <span>📷</span>
+              Screenshots serão adicionados após execução
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. TC-25: verificar integração com ViaCEP (https://viacep.com.br) — requer conexão com internet. TC-26: POST parcialmente implementado, confirmar se chega ao backend.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ FL-06 ════ -->
+    <div class="flow-block open" id="flow-fl06">
+      <div class="flow-header" onclick="toggleFlow('flow-fl06')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-06</span>
+          <span class="flow-title">PDV — Ponto de Venda</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-27</td>
+              <td>Abertura do PDV avulso (/pdv)</td>
+              <td>Usuário autenticado; acessa PDV via BottomNavigation</td>
+              <td>Tela de PDV exibida com seletor de produtos, quantidades e formas de pagamento carregadas</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-28</td>
+              <td>Seleção de produtos e quantidades no PDV</td>
+              <td>Usuário na tela de PDV com produtos carregados</td>
+              <td>Ao selecionar produto e definir quantidade, subtotal é calculado e exibido em tempo real; lista de itens atualizada</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-29</td>
+              <td>Seleção de forma de pagamento — Maquininha</td>
+              <td>Usuário na tela de PDV com itens adicionados</td>
+              <td>Opção "Maquininha" selecionada; campos de parcelamento/valor exibidos; total calculado corretamente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-30</td>
+              <td>Seleção de forma de pagamento — PIX</td>
+              <td>Usuário na tela de PDV com itens adicionados</td>
+              <td>Opção "PIX" selecionada; interface adapta para pagamento via PIX; valor total exibido corretamente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-31</td>
+              <td>Seleção de forma de pagamento — Dinheiro</td>
+              <td>Usuário na tela de PDV com itens adicionados</td>
+              <td>Opção "Dinheiro" selecionada; campo de troco exibido (se aplicável); total calculado corretamente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-32</td>
+              <td>Envio de venda pelo PDV</td>
+              <td>Usuário no PDV com itens e forma de pagamento selecionados</td>
+              <td>Venda enviada via POST /vendaxarope/v2 ou /pedidoxarope/v2; toast de sucesso exibido; PDV resetado para nova venda</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl06">
+            <div class="evidence-placeholder">
+              <span>📷</span>
+              Screenshots serão adicionados após execução
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. ⚠️ O POST de vendas está parcialmente integrado. Verificar se os endpoints /vendaxarope/v2 e /pedidoxarope/v2 respondem corretamente no ambiente de teste.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ FL-07 ════ -->
+    <div class="flow-block open" id="flow-fl07">
+      <div class="flow-header" onclick="toggleFlow('flow-fl07')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-07</span>
+          <span class="flow-title">Contratos — Pendências de Assinatura</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-33</td>
+              <td>Listagem de contratos pendentes</td>
+              <td>Usuário autenticado; tela de Contratos acessada via /contracts</td>
+              <td>Contratos pendentes carregados da API (/pendencia-contrato/{vendedor_id}); exibidos com dados do cliente e status pendente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+            <tr>
+              <td class="tc-code">TC-34</td>
+              <td>Envio de contrato via WhatsApp</td>
+              <td>Usuário na tela de Contratos com pelo menos um contrato listado; cliente com telefone cadastrado</td>
+              <td>Ao acionar a opção de envio, o WhatsApp é aberto com número e mensagem pré-preenchidos para o cliente</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl07">
+            <div class="evidence-placeholder">
+              <span>📷</span>
+              Screenshots serão adicionados após execução
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. ⚠️ Integração da tela de Contratos está parcialmente implementada. Testar em dispositivo físico para validar abertura do WhatsApp (TC-34).
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ FL-08 ════ -->
+    <div class="flow-block open" id="flow-fl08">
+      <div class="flow-header" onclick="toggleFlow('flow-fl08')">
+        <div class="flow-header-left">
+          <span class="flow-id">FL-08</span>
+          <span class="flow-title">Dashboard — Painel de Métricas</span>
+        </div>
+        <span class="flow-chevron">▼</span>
+      </div>
+      <div class="flow-body">
+        <table class="test-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Caso de Teste</th>
+              <th>Pré-condição</th>
+              <th>Resultado Esperado</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tc-code">TC-35</td>
+              <td>Exibição de métricas e resumo do dia no Dashboard</td>
+              <td>Usuário autenticado; acessa /dashboard</td>
+              <td>Painel carregado com cards de métricas (entregas, vendas, clientes); gráficos Recharts renderizados; dados coerentes com o dia atual</td>
+              <td><span class="status pending dot">Pendente</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="evidence-section">
+          <h4>📸 Evidências Visuais</h4>
+          <div class="evidence-gallery" id="gallery-fl08">
+            <div class="evidence-placeholder">
+              <span>📷</span>
+              Screenshots serão adicionados após execução
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-box">
+          <strong>Observações:</strong>
+          Testes pendentes de execução. ⚠️ Dashboard usa dados mockados — verificar se os cards apresentam valores realistas ou placeholders durante o teste.
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG DE BUGS -->
+    <div class="section-title" style="margin-top: 2.5rem;">
+      <div class="icon">🐛</div>
+      Log de Bugs
+    </div>
+
+    <div class="empty-bugs">
+      🎯 Nenhum bug registrado até o momento.<br />
+      <span style="font-size:.8rem; margin-top:.4rem; display:block;">Os bugs serão adicionados aqui conforme os TCs forem executados e eventuais falhas identificadas.</span>
+    </div>
+
+    <!-- MATRIZ DE COBERTURA -->
+    <div class="section-title" style="margin-top: 2.5rem;">
+      <div class="icon">📊</div>
+      Matriz de Cobertura
+    </div>
+
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Fluxo</th>
+          <th>Total TCs</th>
+          <th>Aprovados</th>
+          <th>Reprovados</th>
+          <th>Bloqueados</th>
+          <th>Pendentes</th>
+          <th>Taxa</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>FL-01 — Autenticação</td>
+          <td>5</td><td>1</td><td>0</td><td>0</td><td>4</td><td>20%</td>
+        </tr>
+        <tr>
+          <td>FL-02 — Entregas</td>
+          <td>4</td><td>0</td><td>0</td><td>0</td><td>4</td><td>—</td>
+        </tr>
+        <tr>
+          <td>FL-03 — Rotas</td>
+          <td>5</td><td>0</td><td>0</td><td>0</td><td>5</td><td>—</td>
+        </tr>
+        <tr>
+          <td>FL-04 — Check-in</td>
+          <td>5</td><td>0</td><td>0</td><td>0</td><td>5</td><td>—</td>
+        </tr>
+        <tr>
+          <td>FL-05 — Clientes</td>
+          <td>7</td><td>0</td><td>0</td><td>0</td><td>7</td><td>—</td>
+        </tr>
+        <tr>
+          <td>FL-06 — PDV</td>
+          <td>6</td><td>0</td><td>0</td><td>0</td><td>6</td><td>—</td>
+        </tr>
+        <tr>
+          <td>FL-07 — Contratos</td>
+          <td>2</td><td>0</td><td>0</td><td>0</td><td>2</td><td>—</td>
+        </tr>
+        <tr>
+          <td>FL-08 — Dashboard</td>
+          <td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>—</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>TOTAL</td>
+          <td id="mat-total">35</td>
+          <td id="mat-pass">0</td>
+          <td id="mat-fail">0</td>
+          <td id="mat-block">0</td>
+          <td>35</td>
+          <td id="mat-pct">0%</td>
+        </tr>
+      </tfoot>
+    </table>
+
+  </main>
+
+  <footer class="footer">
+    Gerado pela equipe de QA — <strong>ByStartup</strong> · POP-QA-001 v1.0 · Soda Cristal Tech App
+  </footer>
+
+  <script>
+    // ── Dados de teste — atualizar após execução dos TCs ──
+    const testData = {
+      fl01: { total: 5,  pass: 1, fail: 0, block: 0 },
+      fl02: { total: 4,  pass: 0, fail: 0, block: 0 },
+      fl03: { total: 5,  pass: 0, fail: 0, block: 0 },
+      fl04: { total: 5,  pass: 0, fail: 0, block: 0 },
+      fl05: { total: 7,  pass: 0, fail: 0, block: 0 },
+      fl06: { total: 6,  pass: 0, fail: 0, block: 0 },
+      fl07: { total: 2,  pass: 0, fail: 0, block: 0 },
+      fl08: { total: 1,  pass: 0, fail: 0, block: 0 },
+    };
+
+    function initScoreboard() {
+      let totalAll = 0, passAll = 0, failAll = 0, blockAll = 0;
+
+      Object.values(testData).forEach(f => {
+        totalAll += f.total;
+        passAll  += f.pass;
+        failAll  += f.fail;
+        blockAll += f.block;
+      });
+
+      const executed = passAll + failAll + blockAll;
+      const pct = executed > 0 ? Math.round((passAll / executed) * 100) : 0;
+
+      document.getElementById('sc-total').textContent = totalAll;
+      document.getElementById('sc-pass').textContent  = passAll;
+      document.getElementById('sc-fail').textContent  = failAll;
+      document.getElementById('sc-block').textContent = blockAll;
+      document.getElementById('sc-pct').textContent   = executed > 0 ? pct + '%' : '—';
+
+      const bar = document.getElementById('progress-bar');
+      const totalPct = totalAll > 0 ? Math.round((passAll / totalAll) * 100) : 0;
+      bar.style.width = totalPct + '%';
+      document.getElementById('progress-pct-label').textContent = totalPct + '%';
+
+      // Matriz
+      document.getElementById('mat-total').textContent = totalAll;
+      document.getElementById('mat-pass').textContent  = passAll;
+      document.getElementById('mat-fail').textContent  = failAll;
+      document.getElementById('mat-block').textContent = blockAll;
+      document.getElementById('mat-pct').textContent   = executed > 0 ? pct + '%' : '—';
+    }
+
+    function toggleFlow(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('open');
+    }
+
+    function openLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.getElementById('lightbox-img').src = '';
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    document.getElementById('lightbox').addEventListener('click', function(e) {
+      if (e.target === this) closeLightbox();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Metadados dinâmicos
+      document.getElementById('meta-executor').textContent = 'Equipe QA ByStartup';
+      const now = new Date();
+      document.getElementById('meta-data').textContent =
+        now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      initScoreboard();
+    });
+  </script>
+
+</body>
+</html>
