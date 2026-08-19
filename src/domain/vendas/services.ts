@@ -28,6 +28,17 @@ function assertVendaXaropeAceita(data: unknown): void {
     }
 }
 
+export interface VendaXaropeEnvioResultado {
+    /** Servidor confirmou o registro. */
+    sent: boolean;
+    /** Sem rede: ficou na fila para sincronizar depois. */
+    queued: boolean;
+    /** Chegou ao servidor e foi recusada (não será reenviada sozinha). */
+    rejected: boolean;
+    /** Motivo devolvido pelo servidor quando `rejected`. */
+    message?: string;
+}
+
 export const vendasService = {
     getVendasVendedor: async (vendedorId: number): Promise<Venda[]> => {
         const response = await api.get<Venda[]>(ENDPOINTS.vendasVendedor(vendedorId));
@@ -56,20 +67,26 @@ export const vendasService = {
      *
      * Reenviar é seguro: o servidor tem UNIQUE (data_venda, vendedor_id) e a
      * `data_venda` é congelada no momento da venda — reenvio não duplica registro.
+     *
+     * Recusa do servidor NÃO interrompe o atendimento: volta `rejected` para a
+     * tela avisar o vendedor sem travar o check-in da rota.
      */
     enviarVendaXarope: async (
         venda: Venda,
         vendedorId: number,
         rotaEntregaId: number | null
-    ): Promise<{ sent: boolean; queued: boolean }> => {
+    ): Promise<VendaXaropeEnvioResultado> => {
         try {
             const response = await api.post(ENDPOINTS.vendaXaropeV2, { vendas: [venda] });
             assertVendaXaropeAceita(response.data);
-            return { sent: true, queued: false };
+            return { sent: true, queued: false, rejected: false };
         } catch (error: unknown) {
             if (isNetworkError(error)) {
                 useOutboxStore.getState().enqueueVendaXarope({ vendedorId, rotaEntregaId, venda });
-                return { sent: false, queued: true };
+                return { sent: false, queued: true, rejected: false };
+            }
+            if (error instanceof VendaXaropeRecusadaError) {
+                return { sent: false, queued: false, rejected: true, message: error.message };
             }
             throw error;
         }

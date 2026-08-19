@@ -25,10 +25,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useUserStore } from "../../domain/auth/userStore";
 import { produtosService } from "../../domain/produtos/services";
 import { pagamentosService } from "../../domain/pagamentos/services";
-import {
-  vendasService,
-  VendaXaropeRecusadaError,
-} from "../../domain/vendas/services";
+import { vendasService } from "../../domain/vendas/services";
 import { Produto } from "../../domain/produtos/models";
 import { MeioPagamento } from "../../domain/pagamentos/models";
 import { Venda } from "../../domain/vendas/model";
@@ -398,13 +395,15 @@ export function PDVStandalone({
         });
       }
 
-      toast.success(
+      const resumoVenda = (
         <div>
           <p>
             <strong>
-              {vendaResult.queued
-                ? "Venda registrada (sem conexão)"
-                : "Venda realizada com sucesso!"}
+              {vendaResult.rejected
+                ? "Venda NÃO confirmada pelo sistema"
+                : vendaResult.queued
+                  ? "Venda registrada (sem conexão)"
+                  : "Venda realizada com sucesso!"}
             </strong>
           </p>
           <p>Cliente: {customerName}</p>
@@ -417,8 +416,21 @@ export function PDVStandalone({
               Será enviada automaticamente quando a internet voltar.
             </p>
           )}
-        </div>,
+          {vendaResult.rejected && (
+            <p className="text-red-600 font-medium">
+              {vendaResult.message} — avise o suporte antes de fechar o dia.
+            </p>
+          )}
+        </div>
       );
+
+      // Recusa do servidor não some calada, mas também não trava o atendimento:
+      // o check-in acima já foi registrado e o vendedor segue a rota.
+      if (vendaResult.rejected) {
+        toast.error(resumoVenda, { duration: 15000 });
+      } else {
+        toast.success(resumoVenda);
+      }
 
       // Reset
       setCart([]);
@@ -431,12 +443,7 @@ export function PDVStandalone({
       }
     } catch (error) {
       console.error("Erro ao finalizar venda:", error);
-      // Recusa do servidor: mostra o motivo real em vez de "tente novamente" genérico.
-      const motivo =
-        error instanceof VendaXaropeRecusadaError ? ` (${error.message})` : "";
-      toast.error(
-        `A venda NÃO foi registrada no sistema${motivo}. Confira os dados e lance novamente.`,
-      );
+      toast.error("Erro ao registrar venda no sistema. Tente novamente.");
     } finally {
       setIsProcessing(false);
     }
