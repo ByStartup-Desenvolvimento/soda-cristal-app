@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
-import type { CheckInFullPayload, OutboxItem } from './outboxTypes';
+import type { CheckInFullPayload, VendaXaropePayload, OutboxItem } from './outboxTypes';
 
 interface OutboxState {
     items: OutboxItem[];
     enqueueCheckInFull: (payload: CheckInFullPayload) => string;
+    enqueueVendaXarope: (payload: VendaXaropePayload) => string;
     removeItem: (id: string) => void;
     patchItem: (id: string, patch: Pick<OutboxItem, 'attempts' | 'lastError'>) => void;
     clearAll: () => void;
@@ -26,6 +27,21 @@ export const useOutboxStore = create<OutboxState>()(
                 const item: OutboxItem = {
                     id,
                     type: 'CHECK_IN_FULL',
+                    payload,
+                    clientRequestId: id,
+                    createdAt: Date.now(),
+                    attempts: 0,
+                    lastError: null,
+                };
+                set((s) => ({ items: [...s.items, item] }));
+                return id;
+            },
+
+            enqueueVendaXarope: (payload: VendaXaropePayload) => {
+                const id = newId();
+                const item: OutboxItem = {
+                    id,
+                    type: 'VENDA_XAROPE',
                     payload,
                     clientRequestId: id,
                     createdAt: Date.now(),

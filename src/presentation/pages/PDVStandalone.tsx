@@ -25,7 +25,10 @@ import { useShallow } from "zustand/react/shallow";
 import { useUserStore } from "../../domain/auth/userStore";
 import { produtosService } from "../../domain/produtos/services";
 import { pagamentosService } from "../../domain/pagamentos/services";
-import { vendasService } from "../../domain/vendas/services";
+import {
+  vendasService,
+  VendaXaropeRecusadaError,
+} from "../../domain/vendas/services";
 import { Produto } from "../../domain/produtos/models";
 import { MeioPagamento } from "../../domain/pagamentos/models";
 import { Venda } from "../../domain/vendas/model";
@@ -334,7 +337,17 @@ export function PDVStandalone({
         },
       };
 
-      await vendasService.criarVendaXarope([venda]);
+      // Envia a venda com fallback offline: sem sinal, entra na fila e sincroniza
+      // ao reconectar (igual ao check-in) — não perde venda de xarope em rota.
+      const rotaEntregaIdVenda =
+        isFinishingCheckIn && delivery
+          ? parseInt(String(delivery.id).replace("del-", "")) || null
+          : null;
+      const vendaResult = await vendasService.enviarVendaXarope(
+        venda,
+        vendedorId,
+        rotaEntregaIdVenda
+      );
 
       // Se estiver finalizando um check-in, envia também o registro de atendimento com a quantidade correta
       if (isFinishingCheckIn && delivery && checkInCoordinates) {
@@ -388,13 +401,22 @@ export function PDVStandalone({
       toast.success(
         <div>
           <p>
-            <strong>Venda realizada com sucesso!</strong>
+            <strong>
+              {vendaResult.queued
+                ? "Venda registrada (sem conexão)"
+                : "Venda realizada com sucesso!"}
+            </strong>
           </p>
           <p>Cliente: {customerName}</p>
           {promocaoAplicada && (
             <p className="text-green-600 font-medium">Promoção: {promocaoAplicada.descricao}</p>
           )}
           <p>Total: R$ {getTotal().toFixed(2)}</p>
+          {vendaResult.queued && (
+            <p className="text-amber-600 font-medium">
+              Será enviada automaticamente quando a internet voltar.
+            </p>
+          )}
         </div>,
       );
 
@@ -409,7 +431,12 @@ export function PDVStandalone({
       }
     } catch (error) {
       console.error("Erro ao finalizar venda:", error);
-      toast.error("Erro ao registrar venda no sistema. Tente novamente.");
+      // Recusa do servidor: mostra o motivo real em vez de "tente novamente" genérico.
+      const motivo =
+        error instanceof VendaXaropeRecusadaError ? ` (${error.message})` : "";
+      toast.error(
+        `A venda NÃO foi registrada no sistema${motivo}. Confira os dados e lance novamente.`,
+      );
     } finally {
       setIsProcessing(false);
     }
