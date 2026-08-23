@@ -28,10 +28,6 @@ export const promocoesService = {
     promocoes: Promocao[],
     tipoCliente: TipoCliente
   ): { promo: Promocao | null; totalDesconto: number } {
-    if (tipoCliente !== 'normal') {
-      return { promo: null, totalDesconto: 0 };
-    }
-
     const xaropeItems = cart.filter(
       item =>
         item.product.id >= 0 &&
@@ -40,6 +36,27 @@ export const promocoesService = {
     const totalXaropes = xaropeItems.reduce((acc, item) => acc + item.quantity, 0);
 
     if (totalXaropes === 0) {
+      return { promo: null, totalDesconto: 0 };
+    }
+
+    if (tipoCliente === 'revendedor') {
+      // Revenda: desconto por unidade a partir da quantidade mínima da promoção;
+      // com 12+ a regra comercial é a caixa fechada (produto próprio), sem desconto avulso
+      const promoRevenda = promocoes
+        .filter(p => p.tipo === 'revenda')
+        .sort((a, b) => b.quantidade - a.quantidade)
+        .find(p => totalXaropes >= p.quantidade && totalXaropes < 12);
+
+      if (promoRevenda) {
+        return {
+          promo: promoRevenda,
+          totalDesconto: promoRevenda.valor_desconto * totalXaropes,
+        };
+      }
+      return { promo: null, totalDesconto: 0 };
+    }
+
+    if (tipoCliente !== 'normal') {
       return { promo: null, totalDesconto: 0 };
     }
 
@@ -96,7 +113,7 @@ export const promocoesService = {
       descontosPorItem[item.product.id] = 0;
     });
 
-    if (promo.tipo === 'qualquer') {
+    if (promo.tipo === 'qualquer' || promo.tipo === 'revenda') {
       if (promo.quantidade === 2 && totalXaropes <= 3) {
         const parteDesconto = totalDesconto / 2;
         let unidadesComDesconto = 0;

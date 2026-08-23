@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '../../shared/ui/button';
@@ -21,6 +21,9 @@ interface CustomerRegistrationProps {
   onBack: () => void;
   onSuccess: () => void;
 }
+
+// Sentinela do Select (Radix não aceita value=""); vira rota vazia no payload
+const SEM_ROTA = '__sem_rota__';
 
 export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistrationProps) {
   const { cadastrarCliente, isSubmitting } = useClientesStore();
@@ -50,7 +53,7 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
       qtd_garrafa_comprada: 0,
       dia_reposicao: '',
       obs: '',
-      rota: '', // Será atualizado via useEffect
+      rota: '', // Vazio = sem rota; o escritório designa depois
 
       revendedor_xarope: false,
       revendedor_agua: false,
@@ -62,17 +65,7 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
     }
   });
 
-  const { register, control, handleSubmit, setValue, getValues, watch, formState: { errors } } = form;
-
-  // Auto-seleciona a primeira rota assim que carregar
-  useEffect(() => {
-    if (rotas && rotas.length > 0) {
-      const atual = getValues('rota');
-      if (!atual) {
-        setValue('rota', rotas[0].nome);
-      }
-    }
-  }, [rotas, setValue, getValues]);
+  const { register, control, handleSubmit, setValue, watch, formState: { errors } } = form;
 
   // Busca de CEP
   const handleSearchCEP = async () => {
@@ -376,16 +369,21 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
 
             {/* Rota */}
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-3">
-              <Label htmlFor="rota" className="text-blue-700 font-semibold block">Informe a rota *</Label>
+              <Label htmlFor="rota" className="text-blue-700 font-semibold block">Informe a rota</Label>
               <Controller
                 control={control}
                 name="rota"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingRotas}>
+                  <Select
+                    onValueChange={v => field.onChange(v === SEM_ROTA ? '' : v)}
+                    value={field.value || SEM_ROTA}
+                    disabled={loadingRotas}
+                  >
                     <SelectTrigger className="bg-white border-blue-200 text-black">
                       <SelectValue placeholder={loadingRotas ? "Carregando rotas..." : "Selecione uma rota..."} />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={SEM_ROTA}>Sem rota (escritório define)</SelectItem>
                       {rotas.map(rota => (
                         <SelectItem key={rota.id} value={rota.nome}>{rota.nome}</SelectItem>
                       ))}
@@ -393,6 +391,7 @@ export function CustomerRegistration({ onBack, onSuccess }: CustomerRegistration
                   </Select>
                 )}
               />
+              <p className="text-xs text-blue-600">Cliente de rota de outro vendedor? Deixe "Sem rota" que o escritório designa.</p>
               {errors.rota && <p className="text-red-500 text-xs mt-1">{errors.rota.message}</p>}
             </div>
 

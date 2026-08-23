@@ -258,7 +258,18 @@ export function PDVStandalone({
     } else {
       setPromocaoAplicada(null);
       setTotalDesconto(0);
-      toast.info("Nenhuma promoção elegível encontrada para este carrinho.");
+      const totalXaropes = mappedCart
+        .filter(
+          item =>
+            item.product.id >= 0 &&
+            !item.product.descricao?.toUpperCase().includes("CAIXA MIX")
+        )
+        .reduce((acc, item) => acc + item.quantity, 0);
+      if (tipoCliente === "revendedor" && totalXaropes >= 12) {
+        toast.info("Com 12 ou mais unidades, venda a caixa fechada — o desconto avulso não se aplica.");
+      } else {
+        toast.info("Nenhuma promoção elegível encontrada para este carrinho.");
+      }
     }
   };
 
@@ -675,7 +686,7 @@ export function PDVStandalone({
         <div className="sticky bottom-16 left-0 right-0 bg-white border-t border-border p-4 shadow-lg">
           <div className="space-y-3">
             {/* Promoção Aplicada ou Botão de Aplicar */}
-            {tipoCliente === "normal" && promocoes.length > 0 && (
+            {(tipoCliente === "normal" || tipoCliente === "revendedor") && promocoes.length > 0 && (
               <div className="flex items-center justify-between gap-2 border-b pb-2 mb-2">
                 <span className="text-sm font-medium text-muted-foreground">Promoção:</span>
                 {promocaoAplicada ? (
