@@ -79,6 +79,10 @@ export const useUserStore = create<UserState>((set) => ({
                 throw new Error('Token não recebido do servidor');
             }
 
+            if (!response.vendedor?.id || !response.distribuidor?.id) {
+                throw new Error('SEM_CADASTRO_VENDEDOR');
+            }
+
             localStorage.setItem('auth_token', response.access_token);
             localStorage.setItem('vendedorId', response.vendedor.id.toString());
             localStorage.setItem('distribuidorId', response.distribuidor.id.toString());
@@ -100,7 +104,9 @@ export const useUserStore = create<UserState>((set) => ({
             const err = error as { response?: { data?: { message?: string }; status?: number }; message?: string; code?: string };
 
             let userMessage: string;
-            if (isNetworkError(error)) {
+            if (err.message === 'SEM_CADASTRO_VENDEDOR') {
+                userMessage = 'Usuário sem cadastro de vendedor. Peça ao escritório para vincular este usuário na tela de Vendedores.';
+            } else if (isNetworkError(error)) {
                 userMessage = 'Servidor indisponível. Verifique sua conexão e tente novamente.';
             } else if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
                 userMessage = 'O servidor demorou para responder. Tente novamente em instantes.';
