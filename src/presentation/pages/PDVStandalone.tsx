@@ -18,6 +18,7 @@ import {
   CreditCard,
   ArrowLeft,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
@@ -104,6 +105,14 @@ export function PDVStandalone({
   const [promocaoAplicada, setPromocaoAplicada] = useState<Promocao | null>(null);
   const [totalDesconto, setTotalDesconto] = useState<number>(0);
 
+  // Cada bloco de dados falha por conta propria. Antes os tres dividiam um
+  // try/catch unico com produtos em primeiro: quando produtos dava erro, os
+  // meios de pagamento nem chegavam a ser buscados e a tela abria sem como
+  // fechar a venda.
+  const [erroProdutos, setErroProdutos] = useState(false);
+  const [erroPagamentos, setErroPagamentos] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
+
   const { vendedorId, distribuidorId } = useUserStore(
     useShallow((state) => ({
       vendedorId: state.vendedorId,
@@ -112,44 +121,74 @@ export function PDVStandalone({
   );
 
   useEffect(() => {
+    let cancelado = false;
+
     const loadData = async () => {
-      if (!distribuidorId) return;
-
-      try {
-        //TODO: remover quando tiver o vendedorId apos entender como usa a URL de produtos
-        let distribuidorIdNormalized = Number(distribuidorId + "0");
-        const produtosData = await produtosService.getProdutos(
-          distribuidorIdNormalized,
-        );
-
-        setProdutos(produtosData);
-
-        if (distribuidorId) {
-          const pagamentosData =
-            await pagamentosService.getMeiosPagamento(distribuidorId);
-          setMeiosPagamento(pagamentosData);
+      // Sem identificacao nao ha o que buscar, mas a tela precisa sair do
+      // "Carregando..." mesmo assim, senao trava para sempre.
+      if (!vendedorId && !distribuidorId) {
+        if (!cancelado) {
+          setErroProdutos(true);
+          setErroPagamentos(true);
+          setIsLoading(false);
         }
-
-        if (vendedorId) {
-          try {
-            const promocoesData = await promocoesService.getPromocoes(vendedorId);
-            setPromocoes(promocoesData);
-          } catch (promoErr) {
-            console.error("Erro ao carregar promoções:", promoErr);
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados do PDV:", error);
-        toast.error(
-          "Erro ao carregar produtos, meios de pagamento ou promoções. Verifique sua conexão.",
-        );
-      } finally {
-        setIsLoading(false);
+        return;
       }
+
+      setIsLoading(true);
+      setErroProdutos(false);
+      setErroPagamentos(false);
+
+      const [resProdutos, resPagamentos, resPromocoes] =
+        await Promise.allSettled([
+          vendedorId
+            ? produtosService.getProdutos(vendedorId)
+            : Promise.reject(new Error("Vendedor nao identificado")),
+          distribuidorId
+            ? pagamentosService.getMeiosPagamento(distribuidorId)
+            : Promise.reject(new Error("Distribuidora nao identificada")),
+          vendedorId
+            ? promocoesService.getPromocoes(vendedorId)
+            : Promise.resolve([] as Promocao[]),
+        ]);
+
+      if (cancelado) return;
+
+      if (resProdutos.status === "fulfilled") {
+        setProdutos(resProdutos.value);
+      } else {
+        console.error("Erro ao carregar produtos:", resProdutos.reason);
+        setProdutos([]);
+        setErroProdutos(true);
+      }
+
+      if (resPagamentos.status === "fulfilled") {
+        setMeiosPagamento(resPagamentos.value);
+      } else {
+        console.error(
+          "Erro ao carregar meios de pagamento:",
+          resPagamentos.reason,
+        );
+        setMeiosPagamento([]);
+        setErroPagamentos(true);
+      }
+
+      if (resPromocoes.status === "fulfilled") {
+        setPromocoes(resPromocoes.value);
+      } else {
+        console.error("Erro ao carregar promoções:", resPromocoes.reason);
+        setPromocoes([]);
+      }
+
+      setIsLoading(false);
     };
 
     loadData();
-  }, [vendedorId, distribuidorId]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [vendedorId, distribuidorId, tentativa]);
 
   useEffect(() => {
     setPromocaoAplicada(null);
@@ -284,7 +323,18 @@ export function PDVStandalone({
       return;
     }
 
-    if (!paymentMethod) {
+    // Sem a lista carregada nao existe forma de pagamento para escolher.
+    // Avisar o motivo real, senao o vendedor fica procurando um campo que
+    // nunca vai ter opcao.
+    if (meiosPagamento.length === 0) {
+      toast.error(
+        "As formas de pagamento não carregaram. Toque em 'Tentar novamente' antes de fechar a venda.",
+        { duration: 8000 },
+      );
+      return;
+    }
+
+    if (!paymentMethod || paymentMethod === "disabled") {
       toast.error("Selecione a forma de pagamento");
       return;
     }
@@ -521,17 +571,65 @@ export function PDVStandalone({
         </div>
       </div>
 
-      {/* Info sobre produtos */}
-      <Card className="bg-green-50 border-green-200">
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <p className="text-sm text-green-700">
-              💡 Produtos carregados do catálogo online
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Status real do carregamento. O aviso verde era fixo no codigo e
+          aparecia igual mesmo com a tela sem produto nenhum, o que fazia
+          uma tela quebrada parecer saudavel. */}
+      {erroProdutos || erroPagamentos ? (
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-start space-x-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 text-red-600 shrink-0" />
+              <div className="text-sm text-red-700 space-y-1">
+                {erroProdutos && erroPagamentos ? (
+                  <p>
+                    <strong>Não foi possível carregar o catálogo nem as
+                    formas de pagamento.</strong> Não dá para fechar venda
+                    agora.
+                  </p>
+                ) : erroPagamentos ? (
+                  <p>
+                    <strong>Não foi possível carregar as formas de
+                    pagamento.</strong> Não dá para fechar venda até
+                    recarregar.
+                  </p>
+                ) : (
+                  <p>
+                    <strong>Não foi possível carregar o catálogo de
+                    xaropes.</strong> Garrafas continuam disponíveis.
+                  </p>
+                )}
+                <p className="text-red-600">
+                  Verifique a conexão e tente de novo.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-300 text-red-700"
+              onClick={() => setTentativa((n) => n + 1)}
+            >
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <p className="text-sm text-green-700">
+                💡 {produtos.length}{" "}
+                {produtos.length === 1 ? "xarope" : "xaropes"} no catálogo •{" "}
+                {meiosPagamento.length}{" "}
+                {meiosPagamento.length === 1
+                  ? "forma de pagamento"
+                  : "formas de pagamento"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Customer Info */}
       <Card>
@@ -570,6 +668,12 @@ export function PDVStandalone({
                 )}
               </SelectContent>
             </Select>
+            {meiosPagamento.length === 0 && (
+              <p className="mt-2 text-xs text-red-600">
+                Sem forma de pagamento carregada, a venda não pode ser
+                finalizada. Toque em "Tentar novamente" acima.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
