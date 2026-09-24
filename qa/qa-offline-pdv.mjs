@@ -63,6 +63,26 @@ async function stubApi(context, { falhar = false } = {}) {
   });
 }
 
+// Esta base usa HashRouter (exigencia do WebView do APK); o app web usa rota
+// por caminho. Detecta uma vez em vez de assumir, para o QA valer nas duas.
+let PDV_URL = `${BASE}/pdv`;
+async function resolverRotaPdv(page) {
+  await abrirPdv(page);
+  await page.waitForTimeout(500);
+  if (page.url().includes("#/") && !page.url().includes("#/pdv")) {
+    PDV_URL = `${BASE}/#/pdv`;
+  }
+  return PDV_URL;
+}
+
+// Com HashRouter, navegar para a MESMA url (so muda o hash) nao recarrega o
+// documento: os scripts de init nao rodam de novo e o cenario offline nunca
+// seria aplicado. Passar por about:blank garante documento novo nas duas bases.
+async function abrirPdv(page, waitUntil = "domcontentloaded") {
+  await page.goto("about:blank");
+  await page.goto(PDV_URL, { waitUntil });
+}
+
 const run = async () => {
   // Usa o Chrome do sistema: os browsers baixados do Playwright estao numa
   // versao diferente da lib instalada neste projeto.
@@ -97,7 +117,8 @@ const run = async () => {
 
   // ---------- ETAPA 1: online, popula o cache ----------
   await stubApi(context);
-  await page.goto(`${BASE}/pdv`, { waitUntil: "networkidle" });
+  await resolverRotaPdv(page);
+  await abrirPdv(page, "networkidle");
   await page.waitForTimeout(1500);
 
   // A aba padrao e "Sifão" (garrafas); os xaropes da API ficam na aba "Xarope".
@@ -141,7 +162,7 @@ const run = async () => {
   // ---------- ETAPA 2: offline ----------
   await page.evaluate(() => localStorage.setItem("qa_offline", "1"));
   await stubApi(context, { falhar: true });
-  await page.goto(`${BASE}/pdv`, { waitUntil: "domcontentloaded" });
+  await abrirPdv(page);
   await page.waitForTimeout(2500);
   await abrirAbaXarope();
 
@@ -183,7 +204,7 @@ const run = async () => {
       tx.oncomplete = () => res();
     });
   });
-  await page.goto(`${BASE}/pdv`, { waitUntil: "domcontentloaded" });
+  await abrirPdv(page);
   await page.waitForTimeout(2500);
   await abrirAbaXarope();
   const semCacheTxt = await page.locator("body").innerText();

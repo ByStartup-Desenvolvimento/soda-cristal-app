@@ -258,7 +258,7 @@ export function PDVStandalone({
         )
         .reduce((acc, item) => acc + item.quantity, 0);
       if (tipoCliente === "revendedor" && totalXaropes >= 12) {
-        toast.info("Com 12 ou mais unidades, venda a caixa fechada — o desconto avulso não se aplica.");
+        toast.info("Com 12 ou mais unidades, venda a caixa fechada. O desconto avulso não se aplica.");
       } else {
         toast.info("Nenhuma promoção elegível encontrada para este carrinho.");
       }
@@ -432,7 +432,7 @@ export function PDVStandalone({
           )}
           {vendaResult.rejected && (
             <p className="text-red-600 font-medium">
-              {vendaResult.message} — avise o suporte antes de fechar o dia.
+              {vendaResult.message} (avise o suporte antes de fechar o dia).
             </p>
           )}
         </div>

@@ -24,7 +24,7 @@ import { useNetworkStore } from "../../shared/store/networkStore";
  */
 
 export const OFFLINE_CATALOGO_MESSAGE =
-  "Sem conexão — usando catálogo salvo no aparelho";
+  "Sem conexão, usando catálogo salvo no aparelho";
 
 interface CatalogoState {
   /** Só true após `persist.rehydrate()`. Não persistido. */
