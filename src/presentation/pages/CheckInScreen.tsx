@@ -6,7 +6,12 @@ import { toast } from 'sonner';
 import { checkInService } from '../../domain/checkin/services';
 import { CheckInStatus } from '../../domain/deliveries/models';
 import { formatCheckInApiDate } from '../../shared/utils/formatters';
-import { calculateDistance } from '../../shared/utils/location';
+import {
+  calculateDistance,
+  estaDentroDoRaio,
+  obterLocalizacaoTolerante,
+  RAIO_CHECKIN_METROS,
+} from '../../shared/utils/location';
 
 
 
@@ -19,27 +24,42 @@ interface CheckInScreenProps {
 export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<string>('Aguardando localização...');
+  /** Margem de erro da leitura de GPS, em metros. Entra na conta do raio. */
+  const [precisaoMetros, setPrecisaoMetros] = useState<number | null>(null);
   const [showStatusSelection, setShowStatusSelection] = useState(false);
   const [showSaleDecision, setShowSaleDecision] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<CheckInStatus | null>(null);
 
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation(`${position.coords.latitude}, ${position.coords.longitude}`);
-        },
-        (error) => {
-          console.error('Erro ao obter localização:', error);
-          toast.error('Não foi possível obter sua localização. Verifique as permissões de GPS.');
-          setCurrentLocation('Localização indisponível');
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    } else {
+    if (!('geolocation' in navigator)) {
       toast.error('Geolocalização não suportada pelo seu dispositivo.');
       setCurrentLocation('Localização não suportada');
+      return;
     }
+
+    let cancelado = false;
+
+    obterLocalizacaoTolerante()
+      .then((loc) => {
+        if (cancelado) return;
+        setCurrentLocation(`${loc.latitude}, ${loc.longitude}`);
+        setPrecisaoMetros(loc.precisaoMetros);
+        if (loc.usouUltimaPosicaoConhecida) {
+          toast.info('Usando a última localização conhecida do aparelho.');
+        }
+      })
+      .catch((error) => {
+        if (cancelado) return;
+        console.error('Erro ao obter localização:', error);
+        toast.error(
+          'Não foi possível obter sua localização. Verifique se o GPS está ligado.'
+        );
+        setCurrentLocation('Localização indisponível');
+      });
+
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   const handleCheckIn = async () => {
@@ -67,7 +87,9 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
         toast.error('Localização inválida. Ative o GPS e tente novamente.');
         return;
       }
-      // Validação de Geofencing (Raio de 100 metros)
+      // Validação de Geofencing. O raio subiu de 100 para 350 metros: em area
+      // de sinal fraco a leitura de GPS erra mais e o calculo acusava distancia
+      // que nao existia, travando o vendedor na porta do cliente.
       if (delivery.latitude && delivery.longitude) {
         const destLat = parseFloat(delivery.latitude);
         const destLng = parseFloat(delivery.longitude);
@@ -76,13 +98,13 @@ export function CheckInScreen({ delivery, onBack, onCheckInComplete }: CheckInSc
 
         if (!isNaN(destLat) && !isNaN(destLng)) {
           const distance = calculateDistance(userLat, userLng, destLat, destLng);
-          
-          if (distance > 100) {
+
+          if (!estaDentroDoRaio(distance, precisaoMetros)) {
             toast.error(
               <div className="space-y-2">
                 <p className="font-bold text-red-700">Fora do Raio de Atendimento</p>
                 <p className="text-sm">Você está a {Math.round(distance)} metros do cliente.</p>
-                <p className="text-sm">O check-in só é permitido em um raio de 100 metros.</p>
+                <p className="text-sm">O check-in só é permitido em um raio de {RAIO_CHECKIN_METROS} metros.</p>
               </div>
             );
             setIsLoading(false);
