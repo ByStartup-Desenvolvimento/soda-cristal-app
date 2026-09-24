@@ -24,19 +24,21 @@ import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 
 import { useUserStore } from "../../domain/auth/userStore";
-import { produtosService } from "../../domain/produtos/services";
-import { pagamentosService } from "../../domain/pagamentos/services";
 import { vendasService } from "../../domain/vendas/services";
 import { Produto } from "../../domain/produtos/models";
-import { MeioPagamento } from "../../domain/pagamentos/models";
 import { Venda } from "../../domain/vendas/model";
 import { TipoCliente } from "../../domain/deliveries/models";
 import { getPrecoByTipoCliente } from "../../domain/produtos/precoPorTipoCliente";
 import { checkInService } from "../../domain/checkin/services";
 import { formatCheckInApiDate } from "../../shared/utils/formatters";
 import { CheckInStatus } from "../../domain/deliveries/models";
+// Usado só para o cálculo local do desconto; a busca das promoções mora no catalogoStore.
 import { promocoesService } from "../../domain/promocoes/services";
 import { Promocao } from "../../domain/promocoes/models";
+import {
+  useCatalogoStore,
+  formatarMomentoCatalogo,
+} from "../../domain/pdv/catalogoStore";
 
 interface CartItem {
   product: Produto;
@@ -96,21 +98,34 @@ export function PDVStandalone({
   );
   const [paymentMethod, setPaymentMethod] = useState("");
 
-  // Data from API
-  const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [meiosPagamento, setMeiosPagamento] = useState<MeioPagamento[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Catalogo, meios de pagamento e promocoes vem do cache local (IndexedDB) e
+  // sao atualizados quando ha internet. Antes ficavam so na memoria da tela e
+  // eram buscados a cada abertura: sem sinal os tres falhavam juntos, a lista
+  // de pagamento ficava vazia e a venda nao fechava.
+  const {
+    produtos,
+    meiosPagamento,
+    promocoes,
+    isLoading,
+    erroProdutos,
+    erroPagamentos,
+    offlineHint,
+    lastFetchAt,
+  } = useCatalogoStore(
+    useShallow((state) => ({
+      produtos: state.produtos,
+      meiosPagamento: state.meiosPagamento,
+      promocoes: state.promocoes,
+      isLoading: state.isLoading,
+      erroProdutos: state.erroProdutos,
+      erroPagamentos: state.erroPagamentos,
+      offlineHint: state.offlineHint,
+      lastFetchAt: state.lastFetchAt,
+    })),
+  );
 
-  const [promocoes, setPromocoes] = useState<Promocao[]>([]);
   const [promocaoAplicada, setPromocaoAplicada] = useState<Promocao | null>(null);
   const [totalDesconto, setTotalDesconto] = useState<number>(0);
-
-  // Cada bloco de dados falha por conta propria. Antes os tres dividiam um
-  // try/catch unico com produtos em primeiro: quando produtos dava erro, os
-  // meios de pagamento nem chegavam a ser buscados e a tela abria sem como
-  // fechar a venda.
-  const [erroProdutos, setErroProdutos] = useState(false);
-  const [erroPagamentos, setErroPagamentos] = useState(false);
   const [tentativa, setTentativa] = useState(0);
 
   const { vendedorId, distribuidorId } = useUserStore(
@@ -121,73 +136,11 @@ export function PDVStandalone({
   );
 
   useEffect(() => {
-    let cancelado = false;
-
-    const loadData = async () => {
-      // Sem identificacao nao ha o que buscar, mas a tela precisa sair do
-      // "Carregando..." mesmo assim, senao trava para sempre.
-      if (!vendedorId && !distribuidorId) {
-        if (!cancelado) {
-          setErroProdutos(true);
-          setErroPagamentos(true);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      setIsLoading(true);
-      setErroProdutos(false);
-      setErroPagamentos(false);
-
-      const [resProdutos, resPagamentos, resPromocoes] =
-        await Promise.allSettled([
-          vendedorId
-            ? produtosService.getProdutos(vendedorId)
-            : Promise.reject(new Error("Vendedor nao identificado")),
-          distribuidorId
-            ? pagamentosService.getMeiosPagamento(distribuidorId)
-            : Promise.reject(new Error("Distribuidora nao identificada")),
-          vendedorId
-            ? promocoesService.getPromocoes(vendedorId)
-            : Promise.resolve([] as Promocao[]),
-        ]);
-
-      if (cancelado) return;
-
-      if (resProdutos.status === "fulfilled") {
-        setProdutos(resProdutos.value);
-      } else {
-        console.error("Erro ao carregar produtos:", resProdutos.reason);
-        setProdutos([]);
-        setErroProdutos(true);
-      }
-
-      if (resPagamentos.status === "fulfilled") {
-        setMeiosPagamento(resPagamentos.value);
-      } else {
-        console.error(
-          "Erro ao carregar meios de pagamento:",
-          resPagamentos.reason,
-        );
-        setMeiosPagamento([]);
-        setErroPagamentos(true);
-      }
-
-      if (resPromocoes.status === "fulfilled") {
-        setPromocoes(resPromocoes.value);
-      } else {
-        console.error("Erro ao carregar promoções:", resPromocoes.reason);
-        setPromocoes([]);
-      }
-
-      setIsLoading(false);
-    };
-
-    loadData();
-
-    return () => {
-      cancelado = true;
-    };
+    // `tentativa` muda no botao "Tentar novamente": ai o cache e ignorado e os
+    // dados sao buscados de novo no servidor.
+    void useCatalogoStore
+      .getState()
+      .load(vendedorId, distribuidorId, tentativa > 0);
   }, [vendedorId, distribuidorId, tentativa]);
 
   useEffect(() => {
@@ -611,6 +564,32 @@ export function PDVStandalone({
             >
               Tentar novamente
             </Button>
+          </CardContent>
+        </Card>
+      ) : offlineHint ? (
+        /* Catalogo salvo no aparelho: a venda fecha normalmente, mas preco e
+           promocao sao os da ultima sincronizacao. A data aparece na tela para
+           o vendedor saber o que esta usando. */
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
+              <div className="text-sm text-amber-800 space-y-1">
+                <p>
+                  <strong>{offlineHint}.</strong> Você pode vender normalmente.
+                </p>
+                <p className="text-amber-700">
+                  Preços e promoções carregados {formatarMomentoCatalogo(lastFetchAt)}
+                  {" • "}
+                  {produtos.length}{" "}
+                  {produtos.length === 1 ? "xarope" : "xaropes"} •{" "}
+                  {meiosPagamento.length}{" "}
+                  {meiosPagamento.length === 1
+                    ? "forma de pagamento"
+                    : "formas de pagamento"}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       ) : (
